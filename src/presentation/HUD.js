@@ -48,6 +48,12 @@ export default class HUD {
         // Dibujar timer de la ronda
         this.drawTimer(gameState.timer);
         
+        // NUEVO: Dibujar información de rondas y match
+        this.drawRoundInfo(gameState);
+        
+        // NUEVO: Dibujar estado prominente de la ronda
+        this.drawRoundStatus(gameState);
+        
         // Dibujar nombres de los personajes
         this.drawPlayerNames(p1, p2);
         
@@ -169,25 +175,42 @@ export default class HUD {
         
         // Posición centrada en la parte superior
         const x = this.canvas.width / 2;
-        const y = 40;
+        const y = 45;
         
         // Color del timer basado en el tiempo restante
         let timerColor = '#ffffff';
+        let glowColor = 'rgba(255, 255, 255, 0.3)';
+        
         if (timeLeft <= 10) {
             timerColor = '#ff0000'; // Rojo cuando queda poco tiempo
+            glowColor = 'rgba(255, 0, 0, 0.5)';
+            
+            // Efecto de parpadeo en los últimos 10 segundos
+            if (Math.floor(Date.now() / 500) % 2 === 0) {
+                timerColor = '#ffffff';
+            }
         } else if (timeLeft <= 30) {
             timerColor = '#ffaa00'; // Naranja cuando queda tiempo moderado
+            glowColor = 'rgba(255, 170, 0, 0.4)';
         }
         
-        this.ctx.fillStyle = timerColor;
-        this.ctx.font = 'bold 36px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText(timeLeft.toString(), x, y);
+        // Fondo del timer
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        this.ctx.fillRect(x - 50, y - 35, 100, 50);
         
-        // Sombra del texto
-        this.ctx.fillStyle = '#000000';
-        this.ctx.fillText(timeLeft.toString(), x + 2, y + 2);
+        // Borde del timer
+        this.ctx.strokeStyle = timerColor;
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(x - 50, y - 35, 100, 50);
+        
+        // Sombra/glow del texto
+        this.ctx.shadowColor = glowColor;
+        this.ctx.shadowBlur = 10;
+        
+        // Texto del timer
         this.ctx.fillStyle = timerColor;
+        this.ctx.font = 'bold 28px Arial';
+        this.ctx.textAlign = 'center';
         this.ctx.fillText(timeLeft.toString(), x, y);
         
         this.ctx.restore();
@@ -206,6 +229,210 @@ export default class HUD {
         // Nombre P2 (derecha)
         this.ctx.textAlign = 'right';
         this.ctx.fillText(p2.name || 'Player 2', this.canvas.width - 50, 20);
+        
+        this.ctx.restore();
+    }
+
+    /**
+     * Dibujar información clara de rondas y match
+     */
+    drawRoundInfo(gameState) {
+        this.ctx.save();
+        
+        // Obtener información de rondas del gameState
+        const currentRound = gameState.round || 1;
+        const maxRounds = gameState.maxRounds || 3; // Mejor de 3 por defecto
+        const scores = gameState.scores || { p1: 0, p2: 0 };
+        const roundsToWin = Math.ceil(maxRounds / 2);
+        
+        // Posición central superior
+        const centerX = this.canvas.width / 2;
+        const roundInfoY = 100;
+        
+        // Fondo para la información de rondas
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(centerX - 120, roundInfoY - 25, 240, 50);
+        
+        // Borde decorativo
+        this.ctx.strokeStyle = '#ffaa00';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(centerX - 120, roundInfoY - 25, 240, 50);
+        
+        // Texto de ronda actual
+        this.ctx.fillStyle = '#ffaa00';
+        this.ctx.font = 'bold 16px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(`RONDA ${currentRound}`, centerX, roundInfoY - 5);
+        
+        // Texto de formato del match
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = '12px Arial';
+        this.ctx.fillText(`Mejor de ${maxRounds} (${roundsToWin} para ganar)`, centerX, roundInfoY + 12);
+        
+        // Indicadores de rondas ganadas (como círculos)
+        this.drawRoundWinIndicators(centerX, roundInfoY + 35, scores, roundsToWin);
+        
+        this.ctx.restore();
+    }
+
+    /**
+     * Dibujar indicadores visuales de rondas ganadas
+     */
+    drawRoundWinIndicators(centerX, y, scores, roundsToWin) {
+        const circleRadius = 8;
+        const spacing = 20;
+        const startX = centerX - ((roundsToWin - 1) * spacing) / 2;
+        
+        // Indicadores para P1 (lado izquierdo)
+        for (let i = 0; i < roundsToWin; i++) {
+            const x = startX + (i * spacing) - 60;
+            
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, circleRadius, 0, 2 * Math.PI);
+            
+            if (i < scores.p1) {
+                // Ronda ganada - círculo lleno
+                this.ctx.fillStyle = '#00ff00';
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#ffffff';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+            } else {
+                // Ronda no ganada - círculo vacío
+                this.ctx.strokeStyle = '#666666';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+            }
+        }
+        
+        // Etiqueta P1
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('P1', startX - 80, y + 4);
+        
+        // Indicadores para P2 (lado derecho)
+        for (let i = 0; i < roundsToWin; i++) {
+            const x = startX + (i * spacing) + 60;
+            
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, circleRadius, 0, 2 * Math.PI);
+            
+            if (i < scores.p2) {
+                // Ronda ganada - círculo lleno
+                this.ctx.fillStyle = '#00ff00';
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#ffffff';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+            } else {
+                // Ronda no ganada - círculo vacío
+                this.ctx.strokeStyle = '#666666';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+            }
+        }
+        
+        // Etiqueta P2
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('P2', startX + 80, y + 4);
+    }
+
+    /**
+     * Dibujar estado prominente de la ronda (ROUND START, FIGHT, etc.)
+     */
+    drawRoundStatus(gameState) {
+        if (!gameState || gameState.status === 'playing') return;
+        
+        this.ctx.save();
+        
+        const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height / 2;
+        let statusText = '';
+        let textColor = '#ffffff';
+        let glowColor = 'rgba(255, 255, 255, 0.5)';
+        let fontSize = '64px';
+        
+        // Determinar texto y color según el estado
+        switch (gameState.status) {
+            case 'roundStart':
+                statusText = `RONDA ${gameState.round}`;
+                textColor = '#ffaa00';
+                glowColor = 'rgba(255, 170, 0, 0.8)';
+                
+                // Mostrar countdown si está disponible
+                if (gameState.roundStartTime) {
+                    const elapsed = (Date.now() - gameState.roundStartTime) / 1000;
+                    const remaining = Math.ceil(gameState.gameConfig.roundStartDelay - elapsed);
+                    if (remaining > 0) {
+                        statusText = `RONDA ${gameState.round}\n${remaining}`;
+                    } else {
+                        statusText = '¡LUCHA!';
+                        textColor = '#ff0000';
+                        glowColor = 'rgba(255, 0, 0, 0.8)';
+                    }
+                }
+                break;
+                
+            case 'roundOver':
+                if (gameState.roundResult === 'p1') {
+                    statusText = `${gameState.characters[0]?.name || 'P1'}\nGANA LA RONDA`;
+                    textColor = '#00ff00';
+                    glowColor = 'rgba(0, 255, 0, 0.8)';
+                } else if (gameState.roundResult === 'p2') {
+                    statusText = `${gameState.characters[1]?.name || 'P2'}\nGANA LA RONDA`;
+                    textColor = '#00ff00';
+                    glowColor = 'rgba(0, 255, 0, 0.8)';
+                } else {
+                    statusText = 'RONDA\nEMPATADA';
+                    textColor = '#ffaa00';
+                    glowColor = 'rgba(255, 170, 0, 0.8)';
+                }
+                fontSize = '48px';
+                break;
+                
+            case 'gameOver':
+                statusText = `${gameState.winnerName}\nGANA EL MATCH`;
+                textColor = '#ffff00';
+                glowColor = 'rgba(255, 255, 0, 1.0)';
+                fontSize = '56px';
+                break;
+                
+            case 'paused':
+                statusText = 'PAUSADO';
+                textColor = '#cccccc';
+                glowColor = 'rgba(255, 255, 255, 0.5)';
+                break;
+                
+            default:
+                return; // No mostrar nada para otros estados
+        }
+        
+        // Fondo semitransparente
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Efecto de glow
+        this.ctx.shadowColor = glowColor;
+        this.ctx.shadowBlur = 20;
+        this.ctx.shadowOffsetX = 0;
+        this.ctx.shadowOffsetY = 0;
+        
+        // Texto principal
+        this.ctx.fillStyle = textColor;
+        this.ctx.font = `bold ${fontSize} Arial`;
+        this.ctx.textAlign = 'center';
+        
+        // Manejar texto multilinea
+        const lines = statusText.split('\n');
+        const lineHeight = parseInt(fontSize) * 1.2;
+        const startY = centerY - ((lines.length - 1) * lineHeight) / 2;
+        
+        lines.forEach((line, index) => {
+            this.ctx.fillText(line, centerX, startY + (index * lineHeight));
+        });
         
         this.ctx.restore();
     }

@@ -83,6 +83,12 @@ export default class GameManager {
         this.rollbackSystem.currentFrame = 0;
         this.rollbackSystem.stateHistory.clear();
         
+        // Iniciar la primera ronda con el nuevo sistema
+        if (this.gameState && typeof this.gameState.startNewRound === 'function') {
+            console.log('🎯 Iniciando primera ronda...');
+            this.gameState.startNewRound();
+        }
+        
         console.log('🎮 GameManager v2.0 iniciado (gestión de estado del dominio)');
     }
 

@@ -9,9 +9,9 @@ class GameState {
     constructor() {
         // Estado de la partida (SOLID - SRP)
         this.timer = 99;
-        this.status = 'playing'; // 'playing', 'paused', 'roundOver', 'gameOver'
+        this.status = 'playing'; // 'playing', 'paused', 'roundOver', 'gameOver', 'roundStart'
         this.round = 1;
-        this.maxRounds = 3;
+        this.maxRounds = 3; // Mejor de 3 por defecto
         this.scores = { p1: 0, p2: 0 };
         
         // Información del ganador
@@ -19,13 +19,21 @@ class GameState {
         this.winReason = null; // 'ko', 'timeout', 'match'
         this.winnerName = null; // Nombre del personaje ganador
         
+        // Estado de la ronda actual
+        this.roundStartTime = null;
+        this.roundEndTime = null;
+        this.roundResult = null; // 'p1_wins', 'p2_wins', 'draw'
+        this.isNewRound = true; // Flag para mostrar "ROUND X" al inicio
+        
         // Personajes en el juego (ÚNICA FUENTE DE VERDAD)
         this.characters = [];
         
         // Configuración del juego
         this.gameConfig = {
             roundDuration: 99,
-            winCondition: 'best-of-3' // 'best-of-3', 'single-round', 'time-attack'
+            winCondition: 'best-of-3', // 'best-of-3', 'single-round', 'time-attack'
+            roundStartDelay: 3, // Segundos de delay antes de empezar la ronda
+            roundEndDelay: 3    // Segundos para mostrar resultado de ronda
         };
     }
 
@@ -164,19 +172,11 @@ class GameState {
             console.log(`⏰ Vida P1: ${p1.health}, Vida P2: ${p2.health}`);
             
             if (p1.health > p2.health) {
-                this.awardRoundWin('p1', 'timeout');
-                this.status = 'roundOver';
-                console.log('⏰ P1 gana por tiempo');
+                this.endRound('p1', 'TIMEOUT');
             } else if (p2.health > p1.health) {
-                this.awardRoundWin('p2', 'timeout');
-                this.status = 'roundOver';
-                console.log('⏰ P2 gana por tiempo');
+                this.endRound('p2', 'TIMEOUT');
             } else {
-                // Empate por tiempo - no se otorga ronda
-                this.status = 'roundOver';
-                this.winner = 'draw';
-                this.winReason = 'timeout';
-                console.log('⏰ Empate por tiempo');
+                this.endRound('draw', 'TIMEOUT - EMPATE');
             }
         }
     }
@@ -189,17 +189,14 @@ class GameState {
         
         const p1 = this.characters[0];
         const p2 = this.characters[1];
-
+        
+        // Verificar KO
         if (p1.health <= 0) {
             console.log('💀 KO DETECTADO - P1 derrotado');
-            this.awardRoundWin('p2', 'ko');
-            this.status = 'roundOver';
-            console.log('🏆 P2 gana por KO');
+            this.endRound('p2', 'KO');
         } else if (p2.health <= 0) {
             console.log('💀 KO DETECTADO - P2 derrotado');
-            this.awardRoundWin('p1', 'ko');
-            this.status = 'roundOver';
-            console.log('🏆 P1 gana por KO');
+            this.endRound('p1', 'KO');
         }
     }
 
@@ -242,6 +239,107 @@ class GameState {
         });
         
         console.log(`🔄 Nueva ronda ${this.round} iniciada`);
+    }
+
+    /**
+     * Iniciar nueva ronda con countdown visual
+     */
+    startNewRound() {
+        this.isNewRound = true;
+        this.roundStartTime = Date.now();
+        this.status = 'roundStart';
+        this.timer = this.gameConfig.roundDuration;
+        
+        // Resetear personajes para la nueva ronda
+        this.characters.forEach(character => {
+            character.reset();
+        });
+        
+        console.log(`🎯 INICIANDO RONDA ${this.round} - Preparación...`);
+        
+        // Después del delay, cambiar a 'playing'
+        setTimeout(() => {
+            if (this.status === 'roundStart') {
+                this.status = 'playing';
+                this.isNewRound = false;
+                console.log(`🎮 RONDA ${this.round} - ¡LUCHA!`);
+            }
+        }, this.gameConfig.roundStartDelay * 1000);
+    }
+
+    /**
+     * Finalizar ronda con resultado claro
+     */
+    endRound(winner, reason) {
+        this.status = 'roundOver';
+        this.roundEndTime = Date.now();
+        this.roundResult = winner;
+        
+        // Actualizar scores
+        if (winner === 'p1') {
+            this.scores.p1++;
+            console.log(`🏆 RONDA ${this.round} - ${this.characters[0]?.name || 'P1'} GANA por ${reason}`);
+        } else if (winner === 'p2') {
+            this.scores.p2++;
+            console.log(`🏆 RONDA ${this.round} - ${this.characters[1]?.name || 'P2'} GANA por ${reason}`);
+        } else {
+            console.log(`🤝 RONDA ${this.round} - EMPATE por ${reason}`);
+        }
+        
+        // Verificar si el match terminó
+        const roundsToWin = Math.ceil(this.maxRounds / 2);
+        if (this.scores.p1 >= roundsToWin || this.scores.p2 >= roundsToWin) {
+            this.endMatch();
+        } else {
+            // Preparar siguiente ronda
+            setTimeout(() => {
+                this.round++;
+                this.startNewRound();
+            }, this.gameConfig.roundEndDelay * 1000);
+        }
+    }
+
+    /**
+     * Finalizar match completo
+     */
+    endMatch() {
+        this.status = 'gameOver';
+        
+        if (this.scores.p1 > this.scores.p2) {
+            this.winner = 'p1';
+            this.winnerName = this.characters[0]?.name || 'Player 1';
+        } else if (this.scores.p2 > this.scores.p1) {
+            this.winner = 'p2';
+            this.winnerName = this.characters[1]?.name || 'Player 2';
+        } else {
+            this.winner = 'draw';
+            this.winnerName = 'EMPATE';
+        }
+        
+        this.winReason = 'match';
+        console.log(`🎉 MATCH TERMINADO - ${this.winnerName} gana el match ${this.scores.p1}-${this.scores.p2}`);
+    }
+
+    /**
+     * Obtener texto descriptivo del estado actual
+     */
+    getStatusText() {
+        switch (this.status) {
+            case 'roundStart':
+                return `RONDA ${this.round}`;
+            case 'playing':
+                return 'LUCHA';
+            case 'roundOver':
+                if (this.roundResult === 'p1') return `${this.characters[0]?.name || 'P1'} GANA LA RONDA`;
+                if (this.roundResult === 'p2') return `${this.characters[1]?.name || 'P2'} GANA LA RONDA`;
+                return 'RONDA EMPATADA';
+            case 'gameOver':
+                return `${this.winnerName} GANA EL MATCH`;
+            case 'paused':
+                return 'PAUSADO';
+            default:
+                return '';
+        }
     }
 
     /**
