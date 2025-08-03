@@ -34,6 +34,14 @@ export default class Character {
         this.superAttacks = this.config.superAttacks || [];
         this.stats = this.config.stats || this.getDefaultStats();
         
+        // Debug log para verificar configuraciones cargadas
+        console.log(`🦸 Character ${id} (${name}) constructor:`, {
+            hasConfig: !!characterConfig,
+            animationsCount: Object.keys(this.animations).length,
+            idleFrames: this.animations.idle ? this.animations.idle.frames.length : 0,
+            frameRate: this.animations.idle ? this.animations.idle.frameRate : 'N/A'
+        });
+        
         // Queue de inputs para AI (SOLID - ISP)
         this.inputQueue = [];
     }
@@ -73,6 +81,11 @@ export default class Character {
      * Actualización principal del personaje (SOLID - SRP)
      */
     update(deltaTime, opponent = null, input = null) {
+        // Debug log ocasional para verificar que se está ejecutando
+        if (Math.random() < 0.005) {
+            console.log(`🦸 Character.update: ${this.id}, deltaTime=${deltaTime.toFixed(4)}s, estado=${this.state}`);
+        }
+        
         // 1. Procesar entrada AI si existe
         this.processAIInput();
 
@@ -179,10 +192,21 @@ export default class Character {
      */
     processAnimation(deltaTime) {
         const anim = this.animations[this.state];
-        if (!anim || !anim.frames || anim.frames.length === 0) return;
+        if (!anim || !anim.frames || anim.frames.length === 0) {
+            console.warn(`⚠️ Character ${this.id}: No hay animación para estado ${this.state}`);
+            return;
+        }
 
         const frame = anim.frames[this.currentFrameIndex];
-        if (!frame) return;
+        if (!frame) {
+            console.warn(`⚠️ Character ${this.id}: No hay frame ${this.currentFrameIndex} en estado ${this.state}`);
+            return;
+        }
+
+        // Debug log cada 2 segundos aprox para monitorear deltaTime
+        if (Math.random() < 0.005) {
+            console.log(`🎭 ${this.id}: deltaTime=${deltaTime.toFixed(4)}s, estado=${this.state}, frame=${this.currentFrameIndex}, timer=${this.frameTimer.toFixed(3)}s`);
+        }
 
         // Incrementar frame timer
         this.frameTimer += deltaTime;
@@ -208,14 +232,23 @@ export default class Character {
      */
     advanceFrameIfNeeded(anim) {
         // Calcular duración del frame en segundos
-        const frameRate = anim.frameRate || 10;
-        const frameDuration = anim.frames[this.currentFrameIndex].duration || 1;
-        const timePerFrame = frameDuration / frameRate;
+        const frameRate = anim.frameRate || 10; // frames por segundo
+        const frameDuration = anim.frames[this.currentFrameIndex].duration || 1; // multiplicador opcional
+        
+        // NUEVO: Timing más simple y directo
+        const timePerFrame = 1 / frameRate; // Tiempo base: 1 segundo / frameRate
+        
+        // Debug log más frecuente para diagnosticar
+        if (Math.random() < 0.02) {
+            console.log(`⏱️ ${this.id} timing: frameRate=${frameRate}, timePerFrame=${timePerFrame.toFixed(3)}s, timer=${this.frameTimer.toFixed(3)}s, currentFrame=${this.currentFrameIndex}, shouldAdvance=${this.frameTimer >= timePerFrame}`);
+        }
 
         // Avanzar frame si es tiempo
         if (this.frameTimer >= timePerFrame) {
-            this.frameTimer = 0;
+            this.frameTimer -= timePerFrame; // Mantener el exceso de tiempo
             this.currentFrameIndex++;
+            
+            console.log(`🎞️ ${this.id} avanza frame: ${this.currentFrameIndex - 1} → ${this.currentFrameIndex} en estado: ${this.state}`);
 
             if (this.currentFrameIndex >= anim.frames.length) {
                 this.handleAnimationEnd(anim);

@@ -307,9 +307,8 @@ export default class ApplicationController {
             this.gameManager.startGame();
         }
         
-        // Crear BattleScene y registrarla en el GameManager
-        const battleScene = new BattleScene(battleConfig);
-        this.gameManager.registerBattleScene(battleScene);
+        // CRÍTICO: Crear BattleScene CON GameManager como parámetro
+        const battleScene = new BattleScene(battleConfig, this.gameManager);
         
         await this.sceneManager.transitionTo('battle', { scene: battleScene });
     }

@@ -74,6 +74,11 @@ class GameState {
      * Actualizar personajes (SOLID - SRP)
      */
     updateCharacters(deltaTime) {
+        // Debug log ocasional para verificar que se está ejecutando
+        if (Math.random() < 0.01) {
+            console.log(`🎮 GameState.updateCharacters: ${this.characters.length} personajes, deltaTime=${deltaTime.toFixed(4)}s`);
+        }
+        
         this.characters.forEach((character, index) => {
             const opponent = this.characters[1 - index];
             character.update(deltaTime, opponent);

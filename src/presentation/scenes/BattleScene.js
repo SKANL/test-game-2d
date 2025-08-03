@@ -159,10 +159,21 @@ export default class BattleScene {
      */
     async loadCharacterConfig(characterData) {
         try {
-            const module = await import(characterData.configPath);
+            console.log(`🔧 Intentando cargar config de ${characterData.name} desde: ${characterData.configPath}`);
+            // Usar import estático para mejor compatibilidad con Vite
+            let module;
+            if (characterData.name === 'Ken') {
+                module = await import('../../characters_base/KenBase.js');
+            } else if (characterData.name === 'Ryu') {
+                module = await import('../../characters_base/RyuBase.js');
+            } else {
+                throw new Error(`Personaje no soportado: ${characterData.name}`);
+            }
+            
+            console.log(`✅ Config de ${characterData.name} cargada correctamente:`, module.default);
             return module.default;
         } catch (error) {
-            console.warn(`⚠️ No se pudo cargar config para ${characterData.name}, usando valores por defecto`);
+            console.warn(`⚠️ No se pudo cargar config para ${characterData.name}, usando valores por defecto. Error:`, error);
             return this.getDefaultCharacterConfig();
         }
     }
@@ -300,9 +311,23 @@ export default class BattleScene {
      * Registrar con GameManager (SOLID - DIP)
      */
     registerWithGameManager() {
+        console.log('🔍 registerWithGameManager - GameManager existe:', !!this.gameManager);
+        console.log('🔍 GameManager.registerBattleScene existe:', this.gameManager && typeof this.gameManager.registerBattleScene === 'function');
+        console.log('🔍 GameManager.startGame existe:', this.gameManager && typeof this.gameManager.startGame === 'function');
+        
         if (this.gameManager && typeof this.gameManager.registerBattleScene === 'function') {
             this.gameManager.registerBattleScene(this);
             console.log('🔗 BattleScene registrada en GameManager');
+            
+            // ¡CRÍTICO! Iniciar el GameManager para que procese updates
+            if (typeof this.gameManager.startGame === 'function') {
+                this.gameManager.startGame();
+                console.log('🚀 GameManager iniciado para procesar updates');
+            } else {
+                console.error('❌ GameManager.startGame no existe!');
+            }
+        } else {
+            console.error('❌ GameManager o registerBattleScene no disponible!');
         }
     }
 
@@ -356,7 +381,16 @@ export default class BattleScene {
         
         // Notificar al GameManager para actualizar dominio si existe
         if (this.gameManager && typeof this.gameManager.updateGameState === 'function') {
+            // Debug log ocasional para verificar que se llama
+            if (Math.random() < 0.005) {
+                console.log(`🎮 BattleScene llamando GameManager.updateGameState con deltaTime=${deltaTime.toFixed(4)}s`);
+            }
             this.gameManager.updateGameState(deltaTime);
+        } else {
+            // Debug si no hay GameManager
+            if (Math.random() < 0.01) {
+                console.warn('⚠️ GameManager no disponible o updateGameState no existe');
+            }
         }
         
         // Renderizar frame
@@ -488,10 +522,21 @@ export default class BattleScene {
      */
     renderCharacter(character, spriteSheet, config) {
         const animation = config.animations[character.state];
-        if (!animation || !animation.frames) return;
+        if (!animation || !animation.frames) {
+            console.warn(`⚠️ No hay animación para el estado: ${character.state}`);
+            return;
+        }
         
         const frame = animation.frames[character.currentFrameIndex];
-        if (!frame) return;
+        if (!frame) {
+            console.warn(`⚠️ No hay frame en índice: ${character.currentFrameIndex} para estado: ${character.state}`);
+            return;
+        }
+        
+        // Debug log cada 60 frames (~1 segundo)
+        if (performance.now() % 1000 < 16) {
+            console.log(`🎬 Renderizando: ${character.name} estado=${character.state} frame=${character.currentFrameIndex}/${animation.frames.length - 1}`);
+        }
         
         // Renderizar sprite del personaje
         this.renderer.drawSpriteFrame(

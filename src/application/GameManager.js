@@ -84,6 +84,11 @@ export default class GameManager {
     updateGameState(deltaTime) {
         if (!this.isRunning) return;
 
+        // Debug log ocasional para verificar que GameManager.updateGameState se ejecuta
+        if (Math.random() < 0.005) {
+            console.log(`🎮 GameManager.updateGameState: deltaTime=${deltaTime.toFixed(4)}s, characters=${this.gameState.characters.length}`);
+        }
+
         // Solo actualizar estado si no hay hitstop
         if (!JuiceManager.isHitStopActive()) {
             this.gameState.update(deltaTime);
