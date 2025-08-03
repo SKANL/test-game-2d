@@ -86,7 +86,7 @@ export default {
             frames: [
                 // Solo 2 frames reales que existen en el sprite sheet
                 { x: 1, y: 1412, width: 112, height: 96, type: 'startup', duration: 24 },
-                { x: 114, y: 1412, width: 112, height: 96, type: 'active', duration: 24, hitbox: { x: 40, y: 20, w: 24, h: 20, damage: 10 } }
+                { x: 114, y: 1412, width: 112, height: 96, type: 'active', duration: 24, hitbox: { x: 40, y: 20, w: 24, h: 20, damage: 80 } }
             ],
             frameRate: 5,
             loop: false,
@@ -98,7 +98,7 @@ export default {
             frames: [
                 // Heavy punch - mayor daño, más lento
                 { x: 227, y: 1412, width: 112, height: 96, type: 'startup', duration: 32 },
-                { x: 340, y: 1412, width: 112, height: 96, type: 'active', duration: 32, hitbox: { x: 35, y: 18, w: 32, h: 24, damage: 25 } },
+                { x: 340, y: 1412, width: 112, height: 96, type: 'active', duration: 32, hitbox: { x: 35, y: 18, w: 32, h: 24, damage: 150 } },
                 { x: 453, y: 1412, width: 112, height: 96, type: 'recovery', duration: 24 }
             ],
             frameRate: 4,

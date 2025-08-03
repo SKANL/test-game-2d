@@ -86,7 +86,7 @@ export default {
             frames: [
                 { x: 1, y: 1793, width: 112, height: 96, type: 'startup', duration: 22 }, // Más rápido que Ken
                 { x: 114, y: 1793, width: 112, height: 96, type: 'active', duration: 24, 
-                    hitbox: { x: 40, y: 20, w: 24, h: 20, damage: 12 } // Más daño que Ken
+                    hitbox: { x: 40, y: 20, w: 24, h: 20, damage: 90 } // Más daño que Ken
                 }
             ],
             frameRate: 5,
@@ -100,7 +100,7 @@ export default {
                 // Heavy punch de Ryu - más daño y rango que Ken
                 { x: 227, y: 1793, width: 112, height: 96, type: 'startup', duration: 30 },
                 { x: 340, y: 1793, width: 112, height: 96, type: 'active', duration: 30, 
-                    hitbox: { x: 38, y: 16, w: 36, h: 28, damage: 28 } // Mayor daño y rango que Ken
+                    hitbox: { x: 38, y: 16, w: 36, h: 28, damage: 170 } // Mayor daño y rango que Ken
                 },
                 { x: 453, y: 1793, width: 112, height: 96, type: 'recovery', duration: 22 }
             ],
@@ -116,7 +116,7 @@ export default {
                 { x: 832, y: 618, width: 64, height: 96, type: 'startup', duration: 4 },
                 { x: 896, y: 618, width: 64, height: 96, type: 'active', duration: 3, 
                     projectile: {
-                        damage: 85, // Más daño que el de Ken
+                        damage: 250, // Más daño que el de Ken
                         speed: 7,   // Más lento que el de Ken
                         hitStun: 18 // Más hitstun que el de Ken
                     }

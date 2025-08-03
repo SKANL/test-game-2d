@@ -14,6 +14,11 @@ class GameState {
         this.maxRounds = 3;
         this.scores = { p1: 0, p2: 0 };
         
+        // Información del ganador
+        this.winner = null; // 'p1', 'p2', 'draw'
+        this.winReason = null; // 'ko', 'timeout', 'match'
+        this.winnerName = null; // Nombre del personaje ganador
+        
         // Personajes en el juego (ÚNICA FUENTE DE VERDAD)
         this.characters = [];
         
@@ -67,9 +72,9 @@ class GameState {
      * Actualizar timer de la ronda (SOLID - SRP)
      */
     updateTimer(deltaTime) {
-        this.timer -= deltaTime;
-        if (this.timer <= 0) {
-            this.handleTimeOut();
+        if (this.status === 'playing') {
+            this.timer -= deltaTime;
+            this.timer = Math.max(0, this.timer); // No bajar de 0
         }
     }
 
@@ -89,20 +94,6 @@ class GameState {
     }
 
     /**
-     * Manejar tiempo agotado (SOLID - SRP)
-     */
-    handleTimeOut() {
-        this.timer = 0;
-        this.status = 'roundOver';
-        
-        // Determinar ganador por vida restante
-        const winner = this.determineWinnerByHealth();
-        this.awardRoundWin(winner);
-        
-        console.log(`⏰ Tiempo agotado - Ganador: ${winner || 'Empate'}`);
-    }
-
-    /**
      * Determinar ganador por salud (SOLID - SRP)
      */
     determineWinnerByHealth() {
@@ -119,19 +110,38 @@ class GameState {
     /**
      * Otorgar victoria de ronda (SOLID - SRP)
      */
-    awardRoundWin(winner) {
+    awardRoundWin(winner, reason = 'ko') {
         if (winner === 'p1') {
             this.scores.p1++;
+            this.winner = 'p1';
+            this.winnerName = this.characters[0]?.name || 'Player 1';
         } else if (winner === 'p2') {
             this.scores.p2++;
+            this.winner = 'p2';
+            this.winnerName = this.characters[1]?.name || 'Player 2';
         }
+        this.winReason = reason;
         // En caso de empate no se otorgan puntos
     }
 
     /**
      * Verificar condiciones de victoria (SOLID - SRP)
      */
+    /**
+     * Verificar condiciones de victoria (SOLID - SRP)
+     */
     checkVictoryConditions() {
+        // Solo verificar si el juego está en progreso
+        if (this.status !== 'playing') return;
+        
+        // Debug log periódico
+        if (Math.random() < 0.02) { // 2% de chance para no saturar los logs
+            console.log(`🎯 CheckVictory - Timer: ${this.timer.toFixed(1)}s, P1HP: ${this.characters[0]?.health || 0}, P2HP: ${this.characters[1]?.health || 0}`);
+        }
+        
+        // Verificar tiempo agotado
+        this.checkTimeoutConditions();
+        
         // Verificar KO
         this.checkKOConditions();
         
@@ -140,20 +150,54 @@ class GameState {
     }
 
     /**
+     * Verificar condiciones de timeout (SOLID - SRP)
+     */
+    checkTimeoutConditions() {
+        if (this.timer <= 0 && this.status === 'playing') {
+            console.log('⏰ TIMEOUT DETECTADO - Timer:', this.timer);
+            
+            if (this.characters.length < 2) return;
+            
+            const p1 = this.characters[0];
+            const p2 = this.characters[1];
+            
+            console.log(`⏰ Vida P1: ${p1.health}, Vida P2: ${p2.health}`);
+            
+            if (p1.health > p2.health) {
+                this.awardRoundWin('p1', 'timeout');
+                this.status = 'roundOver';
+                console.log('⏰ P1 gana por tiempo');
+            } else if (p2.health > p1.health) {
+                this.awardRoundWin('p2', 'timeout');
+                this.status = 'roundOver';
+                console.log('⏰ P2 gana por tiempo');
+            } else {
+                // Empate por tiempo - no se otorga ronda
+                this.status = 'roundOver';
+                this.winner = 'draw';
+                this.winReason = 'timeout';
+                console.log('⏰ Empate por tiempo');
+            }
+        }
+    }
+
+    /**
      * Verificar condiciones de KO (SOLID - SRP)
      */
     checkKOConditions() {
-        if (this.characters.length < 2) return;
+        if (this.characters.length < 2 || this.status !== 'playing') return;
         
         const p1 = this.characters[0];
         const p2 = this.characters[1];
 
         if (p1.health <= 0) {
-            this.awardRoundWin('p2');
+            console.log('💀 KO DETECTADO - P1 derrotado');
+            this.awardRoundWin('p2', 'ko');
             this.status = 'roundOver';
             console.log('🏆 P2 gana por KO');
         } else if (p2.health <= 0) {
-            this.awardRoundWin('p1');
+            console.log('💀 KO DETECTADO - P2 derrotado');
+            this.awardRoundWin('p1', 'ko');
             this.status = 'roundOver';
             console.log('🏆 P1 gana por KO');
         }
@@ -166,10 +210,18 @@ class GameState {
         const roundsToWin = Math.ceil(this.maxRounds / 2);
         
         if (this.scores.p1 >= roundsToWin) {
+            console.log('🏆 MATCH TERMINADO - P1 es el ganador del match');
             this.status = 'gameOver';
+            this.winner = 'p1';
+            this.winnerName = this.characters[0]?.name || 'Player 1';
+            this.winReason = 'match';
             console.log('🎉 P1 gana el match');
         } else if (this.scores.p2 >= roundsToWin) {
+            console.log('🏆 MATCH TERMINADO - P2 es el ganador del match');
             this.status = 'gameOver';
+            this.winner = 'p2';
+            this.winnerName = this.characters[1]?.name || 'Player 2';
+            this.winReason = 'match';
             console.log('🎉 P2 gana el match');
         }
     }

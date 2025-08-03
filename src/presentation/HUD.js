@@ -215,7 +215,7 @@ export default class HUD {
         if (gameState.status === 'paused') {
             this.drawPauseIndicator();
         } else if (gameState.status === 'gameOver') {
-            this.drawGameOverIndicator();
+            this.drawGameOverIndicator(gameState);
         }
     }
 
@@ -235,8 +235,15 @@ export default class HUD {
         this.ctx.restore();
     }
 
-    drawGameOverIndicator() {
+    drawGameOverIndicator(gameState) {
         this.ctx.save();
+        
+        // Validar gameState
+        if (!gameState || !gameState.characters || gameState.characters.length < 2) {
+            console.warn('⚠️ HUD.drawGameOverIndicator: gameState inválido');
+            this.ctx.restore();
+            return;
+        }
         
         // Determinar ganador
         const p1 = gameState.characters[0];

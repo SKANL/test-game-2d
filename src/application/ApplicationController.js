@@ -18,6 +18,7 @@ import TitleScene from '../presentation/scenes/TitleScene.js';
 import GameModeScene from '../presentation/scenes/GameModeScene.js';
 import CharacterSelectScene from '../presentation/scenes/CharacterSelectScene.js';
 import BattleScene from '../presentation/scenes/BattleScene.js';
+import VictoryScene from '../presentation/scenes/VictoryScene.js';
 import GameOverScene from '../presentation/scenes/GameOverScene.js';
 import AdminDashboardScene from '../presentation/scenes/AdminDashboardScene.js';
 import OptionsScene from '../presentation/scenes/OptionsScene.js';
@@ -54,6 +55,13 @@ export default class ApplicationController {
             this.gameManager.setPerformanceMonitor(this.performanceMonitor);
         } else {
             console.warn('⚠️ GameManager no tiene método setPerformanceMonitor');
+        }
+        
+        // Inyectar SceneManager
+        if (this.gameManager && typeof this.gameManager.setSceneManager === 'function') {
+            this.gameManager.setSceneManager(this.sceneManager);
+        } else {
+            console.warn('⚠️ GameManager no tiene método setSceneManager');
         }
         
         // Estado interno (SOLID - SRP)
@@ -181,6 +189,7 @@ export default class ApplicationController {
             ['gameMode', GameModeScene],
             ['characterSelect', CharacterSelectScene],
             ['battle', BattleScene],
+            ['victory', VictoryScene],
             ['gameOver', GameOverScene],
             ['adminDashboard', AdminDashboardScene],
             ['options', OptionsScene]

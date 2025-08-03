@@ -177,13 +177,20 @@ export default class SceneManager {
         }
 
         try {
+            console.log(`🎬 Creando escena: ${sceneName} con data:`, data);
+            
             // Crear instancia de la nueva escena
             if (data?.scene) {
                 // Si se proporciona una instancia de escena ya creada
                 this.currentScene = data.scene;
             } else {
-                // Crear nueva instancia
-                this.currentScene = data ? new SceneClass(data) : new SceneClass();
+                // Manejo especial para VictoryScene
+                if (sceneName === 'victory' && data) {
+                    this.currentScene = new SceneClass(data);
+                } else {
+                    // Crear nueva instancia normal
+                    this.currentScene = data ? new SceneClass(data) : new SceneClass();
+                }
             }
 
             // Configurar propiedades adicionales
@@ -192,8 +199,14 @@ export default class SceneManager {
 
             // Inicializar la escena si tiene método init
             if (typeof this.currentScene.init === 'function') {
-                await this.currentScene.init();
+                if (sceneName === 'victory' && data) {
+                    await this.currentScene.init(data);
+                } else {
+                    await this.currentScene.init();
+                }
             }
+
+            console.log(`✅ Escena ${sceneName} creada e inicializada correctamente`);
 
             // Renderizar la escena
             if (typeof this.currentScene.render === 'function') {

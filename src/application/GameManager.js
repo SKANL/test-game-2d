@@ -28,6 +28,7 @@ export default class GameManager {
         
         // Comunicación con BattleScene (SOLID - DIP)
         this.battleSceneRef = null;
+        this.sceneManager = null; // Será inyectado externamente
         
         // Configuración
         this.config = {
@@ -43,6 +44,14 @@ export default class GameManager {
     setPerformanceMonitor(performanceMonitor) {
         this.performanceMonitor = performanceMonitor;
         console.log('📊 PerformanceMonitor inyectado en GameManager');
+    }
+
+    /**
+     * Inyectar SceneManager (SOLID - DIP)
+     */
+    setSceneManager(sceneManager) {
+        this.sceneManager = sceneManager;
+        console.log('🎬 SceneManager inyectado en GameManager');
     }
 
     /**
@@ -156,9 +165,198 @@ export default class GameManager {
         // Detener el GameManager
         this.stopGame();
         
+        // Preparar datos de victoria
+        const victoryData = {
+            winner: this.gameState.winner,
+            winnerName: this.gameState.winnerName,
+            winReason: this.gameState.winReason,
+            scores: { ...this.gameState.scores },
+            p1Name: this.gameState.characters[0]?.name || 'Player 1',
+            p2Name: this.gameState.characters[1]?.name || 'Player 2'
+        };
+        
+        console.log('🎉 Datos de victoria preparados:', victoryData);
+        
+        // Transicionar a VictoryScene con delay para mostrar el resultado final
+        setTimeout(() => {
+            console.log('🎉 Iniciando transición a VictoryScene...');
+            
+            if (this.sceneManager && this.sceneManager.scenes && this.sceneManager.scenes.has('victory')) {
+                console.log('✅ SceneManager y VictoryScene disponibles, transicionando...');
+                this.sceneManager.transitionTo('victory', victoryData);
+            } else {
+                console.warn('⚠️ SceneManager no disponible, usando fallback');
+                // Fallback: mostrar en el DOM directamente
+                this.showVictoryScreenDirectly(victoryData);
+            }
+        }, 2000); // 2 segundos para ver el resultado final
+        
         // Notificar a BattleScene si está registrada
         if (this.battleSceneRef && typeof this.battleSceneRef.onMatchEnd === 'function') {
             this.battleSceneRef.onMatchEnd(winner);
+        }
+    }
+
+    /**
+     * Mostrar pantalla de victoria directamente (fallback)
+     */
+    showVictoryScreenDirectly(victoryData) {
+        console.log('🎉 Mostrando pantalla de victoria directamente');
+        
+        // Limpiar el canvas o DOM actual
+        const canvas = document.getElementById('gameCanvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#000015';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        // Crear overlay de victoria
+        const overlay = document.createElement('div');
+        overlay.id = 'victoryOverlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0f0f23 0%, #2d1b69 50%, #0f0f23 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+        `;
+        
+        // Crear contenido de victoria
+        let title = '';
+        let titleColor = '#ffdd00';
+        
+        if (victoryData.winner === 'draw') {
+            title = '¡EMPATE!';
+            titleColor = '#ffaa00';
+        } else {
+            title = '¡VICTORIA!';
+        }
+        
+        overlay.innerHTML = `
+            <h1 style="font-size: 72px; margin: 0; color: ${titleColor}; text-shadow: 3px 3px 0 #000;">${title}</h1>
+            ${victoryData.winner !== 'draw' ? `
+                <h2 style="font-size: 48px; margin: 20px 0; color: #ffffff;">${victoryData.winnerName}</h2>
+                <p style="font-size: 24px; margin: 10px 0; color: #cccccc;">${this.getWinReasonText(victoryData.winReason)}</p>
+            ` : `
+                <h2 style="font-size: 36px; margin: 20px 0; color: #ffffff;">Tiempo Agotado</h2>
+                <p style="font-size: 24px; margin: 10px 0; color: #cccccc;">Misma cantidad de vida</p>
+            `}
+            
+            <div style="margin: 40px 0; text-align: center;">
+                <h3 style="font-size: 32px; margin-bottom: 20px; color: #ffffff;">PUNTUACIÓN</h3>
+                <p style="font-size: 28px; color: #dddddd;">
+                    ${victoryData.p1Name}: ${victoryData.scores.p1} VS ${victoryData.scores.p2} :${victoryData.p2Name}
+                </p>
+            </div>
+            
+            <div style="margin-top: 60px;">
+                <button id="rematchBtn" style="
+                    background: #4CAF50;
+                    color: white;
+                    border: none;
+                    padding: 15px 30px;
+                    margin: 10px;
+                    border-radius: 8px;
+                    font-size: 20px;
+                    cursor: pointer;
+                    transition: background 0.3s;
+                " onmouseover="this.style.background='#45a049'" onmouseout="this.style.background='#4CAF50'">
+                    🔄 Nueva Batalla
+                </button>
+                <button id="menuBtn" style="
+                    background: #2196F3;
+                    color: white;
+                    border: none;
+                    padding: 15px 30px;
+                    margin: 10px;
+                    border-radius: 8px;
+                    font-size: 20px;
+                    cursor: pointer;
+                    transition: background 0.3s;
+                " onmouseover="this.style.background='#1976D2'" onmouseout="this.style.background='#2196F3'">
+                    🏠 Menú Principal
+                </button>
+            </div>
+            
+            <p style="position: absolute; bottom: 30px; color: #888; font-size: 16px;">
+                Presiona los botones o usa las teclas R (rematch) / M (menú)
+            </p>
+        `;
+        
+        // Agregar al DOM
+        document.body.appendChild(overlay);
+        
+        // Configurar eventos
+        this.setupVictoryEvents(overlay);
+    }
+
+    /**
+     * Obtener texto de razón de victoria
+     */
+    getWinReasonText(reason) {
+        switch (reason) {
+            case 'ko': return 'Victoria por K.O.';
+            case 'timeout': return 'Victoria por Tiempo';
+            case 'match': return 'Victoria del Match';
+            default: return 'Victoria';
+        }
+    }
+
+    /**
+     * Configurar eventos de la pantalla de victoria
+     */
+    setupVictoryEvents(overlay) {
+        const rematchBtn = overlay.querySelector('#rematchBtn');
+        const menuBtn = overlay.querySelector('#menuBtn');
+        
+        // Eventos de botones
+        rematchBtn.addEventListener('click', () => {
+            this.handleVictoryChoice('rematch');
+            overlay.remove();
+        });
+        
+        menuBtn.addEventListener('click', () => {
+            this.handleVictoryChoice('menu');
+            overlay.remove();
+        });
+        
+        // Eventos de teclado
+        const keyHandler = (e) => {
+            if (e.key.toLowerCase() === 'r') {
+                this.handleVictoryChoice('rematch');
+                overlay.remove();
+                document.removeEventListener('keydown', keyHandler);
+            } else if (e.key.toLowerCase() === 'm') {
+                this.handleVictoryChoice('menu');
+                overlay.remove();
+                document.removeEventListener('keydown', keyHandler);
+            }
+        };
+        
+        document.addEventListener('keydown', keyHandler);
+    }
+
+    /**
+     * Manejar elección en pantalla de victoria
+     */
+    handleVictoryChoice(choice) {
+        console.log(`🎮 Usuario eligió: ${choice}`);
+        
+        if (choice === 'rematch') {
+            // Reiniciar el juego
+            location.reload(); // Forma simple de reiniciar
+        } else if (choice === 'menu') {
+            // Ir al menú principal
+            location.reload(); // Por ahora, recargar la página
         }
     }
 
