@@ -83,13 +83,23 @@ export default class BattleScene {
      * Cargar datos de personajes desde base de datos mock (SOLID - SRP)
      */
     loadCharacterData() {
-        const p1Data = mockDb.characters.find(c => c.name === this.p1Character);
-        const p2Data = mockDb.characters.find(c => c.name === this.p2Character);
+        // Normalizar nombres para búsqueda (capitalizar primera letra)
+        const normalizeCharacterName = (name) => {
+            return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+        };
+        
+        const p1Name = normalizeCharacterName(this.p1Character);
+        const p2Name = normalizeCharacterName(this.p2Character);
+        
+        const p1Data = mockDb.characters.find(c => c.name === p1Name);
+        const p2Data = mockDb.characters.find(c => c.name === p2Name);
         
         if (!p1Data || !p2Data) {
-            throw new Error(`Personajes no encontrados: P1:${this.p1Character} P2:${this.p2Character}`);
+            console.error('❌ Personajes disponibles:', mockDb.characters.map(c => c.name));
+            throw new Error(`Personajes no encontrados: P1:${p1Name} P2:${p2Name}`);
         }
         
+        console.log(`✅ Personajes cargados: P1:${p1Data.name}, P2:${p2Data.name}`);
         return { p1: p1Data, p2: p2Data };
     }
 
