@@ -1,11 +1,15 @@
 export default class AuthManager {
-    constructor() {
+    constructor(apiClient = null) {
         this.authToken = null;
         this.currentUser = null;
+        this.apiClient = apiClient;
     }
 
     async register(email, password) {
-        // Simulación de registro
+        if (this.apiClient) {
+            return await this.apiClient.register(email, password);
+        }
+        // Fallback a simulación
         return new Promise((resolve) => {
             setTimeout(() => {
                 resolve({
@@ -17,7 +21,23 @@ export default class AuthManager {
     }
 
     async login(email, password) {
-        // Simulación de login
+        if (this.apiClient) {
+            try {
+                const response = await this.apiClient.login(email, password);
+                this.authToken = response.token;
+                this.currentUser = response.user;
+                
+                // Guardar en sessionStorage
+                sessionStorage.setItem('authToken', this.authToken);
+                sessionStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+                
+                return response;
+            } catch (error) {
+                throw error;
+            }
+        }
+        
+        // Fallback a simulación
         return new Promise((resolve) => {
             setTimeout(() => {
                 this.authToken = 'mock-token-123';

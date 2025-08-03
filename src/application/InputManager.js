@@ -137,34 +137,32 @@ class InputManager {
     }
     
     // Verificar si una secuencia específica se ha introducido (para movimientos especiales)
-    checkSequence(sequence, playerIndex) {
-        const buffer = playerIndex === 0 ? this.inputBuffer_p1 : this.inputBuffer_p2;
-        
+    /**
+     * Verifica si una secuencia de acciones está presente en el buffer del jugador dentro de una ventana de tiempo.
+     * @param {string[]} sequence - Array de acciones (ej: ['down', 'forward', 'attack1'])
+     * @param {number} playerIndex - 1 para P1, 2 para P2
+     * @param {number} windowMs - Tiempo máximo total para la secuencia (default 500ms)
+     * @returns {boolean}
+     */
+    checkSequence(sequence, playerIndex, windowMs = 500) {
+        const buffer = playerIndex === 1 ? this.inputBuffer_p1 : this.inputBuffer_p2;
         if (buffer.length < sequence.length) return false;
-        
-        // Ventana de tiempo para completar la secuencia (en milisegundos)
-        const TIME_WINDOW = 500;
-        
-        // Iterar desde el final del buffer
-        for (let i = 0; i < sequence.length; i++) {
-            const requiredAction = sequence[sequence.length - 1 - i];
-            const bufferIndex = buffer.length - 1 - i;
-            
-            // Comprobar que la acción coincide
-            if (buffer[bufferIndex].action !== requiredAction) {
-                return false;
-            }
-            
-            // Comprobar la ventana de tiempo
-            if (i > 0) {
-                const timeDiff = buffer[bufferIndex + 1].timestamp - buffer[bufferIndex].timestamp;
-                if (timeDiff > TIME_WINDOW / sequence.length) {
-                    return false;
+        let seqIdx = sequence.length - 1;
+        let now = Date.now();
+        let lastTime = null;
+        for (let i = buffer.length - 1; i >= 0; i--) {
+            if (buffer[i].action === sequence[seqIdx]) {
+                if (lastTime && (lastTime - buffer[i].timestamp > 150)) return false;
+                lastTime = buffer[i].timestamp;
+                seqIdx--;
+                if (seqIdx < 0) {
+                    // Verificar ventana total
+                    if (now - buffer[i].timestamp <= windowMs) return true;
+                    else return false;
                 }
             }
         }
-        
-        return true;
+        return false;
     }
     
     // Métodos de utilidad para comprobar estados de teclas individuales

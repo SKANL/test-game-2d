@@ -17,7 +17,7 @@ export default {
     // Estadísticas del personaje (Sección 13)
     stats: {
         health: 100,
-        speed: 2,
+        speed: 85,       // Velocidad ajustada para movimiento fluido (ligeramente más rápido que Ryu)
         jumpForce: -400, // Fuerza de salto (negativa porque Y aumenta hacia abajo)
         gravity: 800,    // Gravedad (píxeles por segundo²)
         superMeterGainOnHit: 10,

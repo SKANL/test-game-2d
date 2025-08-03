@@ -17,7 +17,7 @@ export default {
     // Estadísticas del personaje (Sección 13)
     stats: {
         health: 1050,      // Más resistente que Ken
-        speed: 1.8,        // Ligeramente más lento que Ken
+        speed: 80,         // Velocidad ajustada para movimiento fluido
         jumpForce: -400,   // Misma altura de salto
         gravity: 800,      // Misma gravedad
         superMeterGainOnHit: 12,        // Gana más medidor que Ken

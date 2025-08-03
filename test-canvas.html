@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Test Canvas - Juego de Peleas 2D</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .status {
+            padding: 15px;
+            margin: 10px;
+            border-radius: 8px;
+            border: 2px solid;
+        }
+        .success { border-color: #4CAF50; background: rgba(76, 175, 80, 0.1); }
+        .error { border-color: #f44336; background: rgba(244, 67, 54, 0.1); }
+        canvas {
+            border: 2px solid #4CAF50;
+            margin: 20px 0;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 Test de Canvas y CanvasRenderer</h1>
+        <div id="status" class="status">🔄 Iniciando tests...</div>
+        
+        <canvas id="gameCanvas" width="1200" height="600"></canvas>
+        
+        <button onclick="runCanvasTest()" style="margin: 10px; padding: 10px 20px; font-size: 16px;">
+            🧪 Probar CanvasRenderer
+        </button>
+        
+        <button onclick="runBattleSceneTest()" style="margin: 10px; padding: 10px 20px; font-size: 16px;">
+            ⚔️ Probar BattleScene
+        </button>
+        
+        <div id="log" style="text-align: left; background: #000; padding: 15px; margin: 20px 0; border-radius: 5px; font-family: monospace; max-height: 300px; overflow-y: auto;"></div>
+    </div>
+
+    <script type="module">
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div style="color: #4CAF50;">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function updateStatus(message, isError = false) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${isError ? 'error' : 'success'}`;
+            statusEl.textContent = message;
+        }
+
+        async function runCanvasTest() {
+            log('🧪 Iniciando test de CanvasRenderer...');
+            updateStatus('🔄 Probando CanvasRenderer...');
+            
+            try {
+                // Test 1: Verificar canvas
+                const canvas = document.getElementById('gameCanvas');
+                log(`✅ Canvas encontrado: ${canvas.width}x${canvas.height}`);
+                
+                // Test 2: Importar CanvasRenderer
+                const { default: CanvasRenderer } = await import('./src/presentation/CanvasRenderer.js');
+                log('✅ CanvasRenderer importado correctamente');
+                
+                // Test 3: Crear instancia
+                const renderer = new CanvasRenderer('gameCanvas');
+                log('✅ CanvasRenderer instanciado correctamente');
+                
+                // Test 4: Probar dibujado básico
+                renderer.clearCanvas();
+                renderer.ctx.fillStyle = '#4CAF50';
+                renderer.ctx.fillRect(50, 50, 100, 100);
+                renderer.ctx.fillStyle = '#2196F3';
+                renderer.ctx.fillRect(150, 150, 100, 100);
+                renderer.ctx.fillStyle = '#fff';
+                renderer.ctx.font = '24px Arial';
+                renderer.ctx.fillText('Canvas Test OK!', 300, 300);
+                log('✅ Dibujado de prueba completado');
+                
+                updateStatus('✅ CanvasRenderer funcionando correctamente');
+                
+            } catch (error) {
+                log(`❌ Error en test de CanvasRenderer: ${error.message}`);
+                updateStatus(`❌ Error: ${error.message}`, true);
+                console.error('Error en test:', error);
+            }
+        }
+
+        async function runBattleSceneTest() {
+            log('⚔️ Iniciando test de BattleScene...');
+            updateStatus('🔄 Probando BattleScene...');
+            
+            try {
+                // Test 1: Verificar imports necesarios
+                log('📦 Importando dependencias...');
+                
+                const [
+                    { default: BattleScene },
+                    { default: GameManager },
+                    { default: MockApiClient }
+                ] = await Promise.all([
+                    import('./src/presentation/scenes/BattleScene.js'),
+                    import('./src/application/GameManager.js'),
+                    import('./src/infrastructure/MockApiClient.js')
+                ]);
+                
+                log('✅ Todas las dependencias importadas');
+                
+                // Test 2: Crear GameManager
+                const apiClient = new MockApiClient();
+                const gameManager = new GameManager(apiClient);
+                log('✅ GameManager creado');
+                
+                // Test 3: Crear BattleScene
+                const battleScene = new BattleScene(gameManager);
+                log('✅ BattleScene instanciada');
+                
+                // Test 4: Inicializar BattleScene
+                await battleScene.init();
+                log('✅ BattleScene inicializada correctamente');
+                
+                updateStatus('✅ BattleScene funcionando correctamente');
+                
+            } catch (error) {
+                log(`❌ Error en test de BattleScene: ${error.message}`);
+                updateStatus(`❌ Error: ${error.message}`, true);
+                console.error('Error en test:', error);
+            }
+        }
+
+        // Hacer funciones globales
+        window.runCanvasTest = runCanvasTest;
+        window.runBattleSceneTest = runBattleSceneTest;
+
+        // Auto-test al cargar
+        setTimeout(runCanvasTest, 1000);
+    </script>
+</body>
+</html>

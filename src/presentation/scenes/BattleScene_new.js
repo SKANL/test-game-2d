@@ -202,15 +202,15 @@ export default class BattleScene {
     initializePresentationSystems() {
         console.log('🔧 Inicializando sistemas de presentación...');
         
-        // Renderer con ID del canvas
-        this.renderer = new CanvasRenderer('gameCanvas');
+        // Renderer
+        this.renderer = new CanvasRenderer();
         
         // Input Manager
         this.inputManager = new InputManager();
         this.inputManager.init();
         
-        // HUD (necesita el renderer)
-        this.hud = new HUD(this.renderer);
+        // HUD
+        this.hud = new HUD();
         
         // Audio Manager (sin await, inicialización asíncrona opcional)
         this.audioManager = new AudioManager();
@@ -269,10 +269,9 @@ export default class BattleScene {
         
         // Controlador del jugador 1 (humano)
         const p1Controller = new PlayerController(
-            1, // playerIndex
             this.characters[0], 
-            this.inputManager,
-            this.audioManager
+            this.inputManager, 
+            1 // playerIndex
         );
         
         // Controlador del jugador 2 (IA o humano según modo)
@@ -284,10 +283,9 @@ export default class BattleScene {
             );
         } else {
             p2Controller = new PlayerController(
-                2, // playerIndex
                 this.characters[1], 
-                this.inputManager,
-                this.audioManager
+                this.inputManager, 
+                2 // playerIndex
             );
         }
         

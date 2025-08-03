@@ -1,87 +1,107 @@
-import GameManager from './application/GameManager.js';
-import SceneManager from './application/SceneManager.js';
-import AuthManager from './infrastructure/AuthManager.js';
-import LoginScene from './presentation/scenes/LoginScene.js';
-import LoadingScene from './presentation/scenes/LoadingScene.js';
-import GameModeScene from './presentation/scenes/GameModeScene.js';
-import CharacterSelectScene from './presentation/scenes/CharacterSelectScene.js';
-import BattleScene from './presentation/scenes/BattleScene.js';
+/**
+ * main.js - Punto de entrada OPTIMIZADO de la aplicación
+ * Refactorizado para seguir principios SOLID y Clean Architecture
+ * Eliminadas variables globales innecesarias y mejorado manejo de errores
+ */
+import ApplicationController from './application/ApplicationController.js';
 
-// Inicialización del sistema según las instrucciones
-const authManager = new AuthManager();
-const sceneManager = new SceneManager();
-const gameManager = new GameManager();
-
-// Registrar escenas en el SceneManager
-sceneManager.registerScene('login', LoginScene);
-sceneManager.registerScene('loading', LoadingScene);
-sceneManager.registerScene('characterSelect', CharacterSelectScene);
-sceneManager.registerScene('battle', BattleScene);
-
-// Función principal de inicialización
+/**
+ * Función principal de inicialización con manejo robusto de errores
+ */
 async function initializeGame() {
-    // 1. Inicializar AuthManager
-    authManager.init();
-    
-    // 2. Verificar autenticación
-    if (!authManager.isAuthenticated()) {
-        // Si no está autenticado, ir a LoginScene
-        const loginScene = new LoginScene((role) => {
-            // Callback de autenticación exitosa
-            handleAuthentication(role);
-        });
-        loginScene.render();
-    } else {
-        // Si ya está autenticado, proceder según el rol
-        const user = authManager.getUser();
-        handleAuthentication(user.role);
+    try {
+        console.log('🚀 Iniciando aplicación...');
+        
+        // Verificar que los elementos DOM estén disponibles
+        const gameCanvas = document.getElementById('gameCanvas');
+        if (!gameCanvas) {
+            throw new Error('Canvas del juego no encontrado en el DOM');
+        }
+        
+        console.log('✅ Canvas encontrado, creando ApplicationController...');
+        
+        // Crear e inicializar el controlador de aplicación
+        const applicationController = new ApplicationController();
+        
+        console.log('✅ ApplicationController creado, inicializando...');
+        await applicationController.initialize();
+        
+        console.log('✅ Aplicación inicializada correctamente');
+        
+        // Solo hacer disponible globalmente en modo desarrollo para debugging
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            window.debugController = applicationController;
+            console.log('🐛 Debug controller disponible como window.debugController');
+        }
+        
+    } catch (error) {
+        console.error('❌ Error fatal al inicializar la aplicación:', error);
+        showErrorScreen(error);
     }
 }
 
-function handleAuthentication(role) {
-    if (role === 'ADMIN') {
-        // Transicionar a AdminDashboard (no implementado aún)
-        console.log('Transicionando a Admin Dashboard');
-    } else {
-        // Flujo normal de usuario
-        transitionToGameMode();
-    }
+/**
+ * Mostrar pantalla de error user-friendly
+ */
+function showErrorScreen(error) {
+    document.body.innerHTML = 
+        '<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); color: #ffffff; font-family: Arial, sans-serif; text-align: center; padding: 20px;">' +
+            '<div style="background: rgba(255, 0, 0, 0.1); border: 2px solid #ff4444; border-radius: 10px; padding: 30px; max-width: 600px; margin-bottom: 20px;">' +
+                '<h1 style="color: #ff4444; margin-top: 0;">⚠️ Error de Inicialización</h1>' +
+                '<p style="font-size: 18px; margin-bottom: 20px;">No se pudo inicializar la aplicación correctamente.</p>' +
+                '<p style="font-size: 14px; color: #cccccc; margin-bottom: 20px;">Error técnico: ' + (error.message || error) + '</p>' +
+                '<button onclick="window.location.reload()" style="background: #4CAF50; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px;">🔄 Reintentar</button>' +
+                '<button onclick="toggleErrorDetails()" style="background: #2196F3; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px;">🔍 Ver Detalles</button>' +
+            '</div>' +
+            '<div id="errorDetails" style="display: none; background: rgba(0, 0, 0, 0.3); border: 1px solid #666; border-radius: 5px; padding: 20px; max-width: 800px; max-height: 300px; overflow-y: auto; text-align: left;">' +
+                '<h3>Stack Trace:</h3>' +
+                '<pre style="white-space: pre-wrap; word-wrap: break-word; font-size: 12px; color: #ff9999;">' + (error.stack || 'No hay stack trace disponible') + '</pre>' +
+            '</div>' +
+        '</div>';
+    
+    // Función para mostrar/ocultar detalles del error
+    window.toggleErrorDetails = function() {
+        const details = document.getElementById('errorDetails');
+        details.style.display = details.style.display === 'none' ? 'block' : 'none';
+    };
 }
 
-function transitionToLoading() {
-    // Limpiar DOM completamente
-    document.body.innerHTML = '';
-    
-    const loadingScene = new LoadingScene();
-    loadingScene.render();
-    
-    // Simular carga de recursos
-    setTimeout(() => {
-        transitionToCharacterSelect();
-    }, 2000);
-}
-
-function transitionToGameMode() {
-    const gameModeScene = new GameModeScene((selectedMode) => {
-        transitionToCharacterSelect(selectedMode);
+/**
+ * Manejar errores no capturados de promises
+ */
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('❌ Promise rechazada no capturada:', {
+        reason: event.reason,
+        promise: event.promise
     });
-    
-    document.body.innerHTML = '';
-    gameModeScene.render();
+    // Prevenir que aparezca en la consola del navegador
+    event.preventDefault();
+});
+
+/**
+ * Manejar errores JavaScript no capturados
+ */
+window.addEventListener('error', (event) => {
+    console.error('❌ Error JavaScript no capturado:', {
+        message: event.message,
+        source: event.filename,
+        line: event.lineno,
+        column: event.colno,
+        error: event.error
+    });
+});
+
+/**
+ * Inicialización con detección inteligente del estado del DOM
+ */
+function startApplication() {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeGame);
+    } else {
+        // DOM ya está listo, inicializar inmediatamente
+        initializeGame();
+    }
 }
 
-function transitionToCharacterSelect(gameMode) {
-    const characterSelect = new CharacterSelectScene((selections) => {
-        transitionToBattle(selections);
-    }, gameMode);
-    
-    document.body.innerHTML = '';
-    characterSelect.render();
-}
-
-function transitionToBattle(battleConfig) {
-    sceneManager.transitionTo('battle', battleConfig);
-}
-
-// Iniciar el juego
-initializeGame();
+// Iniciar la aplicación
+startApplication();
