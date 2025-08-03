@@ -56,6 +56,9 @@ class GameState {
         // Actualizar personajes
         this.updateCharacters(deltaTime);
 
+        // NUEVO: Detectar colisiones y aplicar daño
+        this.detectCollisions();
+
         // Verificar condiciones de victoria
         this.checkVictoryConditions();
     }
@@ -270,6 +273,118 @@ class GameState {
      */
     isGameOver() {
         return this.status === 'gameOver';
+    }
+
+    /**
+     * Detectar colisiones entre personajes (SOLID - SRP)
+     */
+    detectCollisions() {
+        if (this.characters.length < 2) return;
+
+        const [p1, p2] = this.characters;
+
+        // Verificar colisiones de hitboxes activos
+        this.checkAttackCollisions(p1, p2);
+        this.checkAttackCollisions(p2, p1);
+    }
+
+    /**
+     * Verificar colisiones de ataque entre attacker y defender (SOLID - SRP)
+     */
+    checkAttackCollisions(attacker, defender) {
+        // Solo verificar si el atacante está en un estado de ataque
+        if (!this.isAttackingState(attacker.state)) return;
+
+        // Obtener hitbox del frame actual
+        const hitbox = this.getActiveHitbox(attacker);
+        if (!hitbox) return;
+
+        // Verificar si ya golpeó en este ataque
+        if (attacker.attackHasHit) return;
+
+        // Calcular posición real del hitbox
+        const hitboxX = attacker.position.x + (attacker.isFlipped ? -hitbox.x - hitbox.w : hitbox.x);
+        const hitboxY = attacker.position.y + hitbox.y;
+
+        // Verificar colisión con el defensor
+        if (this.isColliding(
+            hitboxX, hitboxY, hitbox.w, hitbox.h,
+            defender.position.x, defender.position.y, 64, 96 // Tamaño aproximado del personaje
+        )) {
+            this.applyHit(attacker, defender, hitbox);
+        }
+    }
+
+    /**
+     * Verificar si un estado es de ataque (SOLID - SRP)
+     */
+    isAttackingState(state) {
+        return ['lightPunch', 'heavyPunch', 'hadoken', 'shoryuken'].includes(state);
+    }
+
+    /**
+     * Obtener hitbox activo del personaje (SOLID - SRP)
+     */
+    getActiveHitbox(character) {
+        const animation = character.animations[character.state];
+        if (!animation || !animation.frames) return null;
+
+        const frame = animation.frames[character.currentFrameIndex];
+        if (!frame || frame.type !== 'active') return null;
+
+        return frame.hitbox || null;
+    }
+
+    /**
+     * Verificar colisión entre dos rectángulos (SOLID - SRP)
+     */
+    isColliding(x1, y1, w1, h1, x2, y2, w2, h2) {
+        return !(x1 > x2 + w2 || x1 + w1 < x2 || y1 > y2 + h2 || y1 + h1 < y2);
+    }
+
+    /**
+     * Aplicar golpe entre atacante y defensor (SOLID - SRP)
+     */
+    applyHit(attacker, defender, hitbox) {
+        console.log(`💥 ${attacker.name} golpea a ${defender.name} por ${hitbox.damage} daño!`);
+
+        // Aplicar daño
+        defender.health -= hitbox.damage;
+        if (defender.health < 0) defender.health = 0;
+
+        // Marcar que el ataque ya golpeó
+        attacker.attackHasHit = true;
+
+        // Incrementar super meter
+        attacker.superMeter += attacker.stats.superMeterGainOnHit || 10;
+        defender.superMeter += attacker.stats.superMeterGainOnTakeDamage || 7;
+
+        // Limitar super meter al máximo
+        if (attacker.superMeter > attacker.maxSuperMeter) attacker.superMeter = attacker.maxSuperMeter;
+        if (defender.superMeter > defender.maxSuperMeter) defender.superMeter = defender.maxSuperMeter;
+
+        // Efectos visuales y sonoros (si están disponibles)
+        this.triggerHitEffects(defender.position.x, defender.position.y);
+
+        console.log(`💖 ${defender.name} vida: ${defender.health}/${defender.maxHealth}`);
+    }
+
+    /**
+     * Activar efectos visuales de golpe (SOLID - SRP)
+     */
+    triggerHitEffects(x, y) {
+        // Esto se puede expandir con efectos más elaborados
+        if (typeof window !== 'undefined' && window.juiceManager) {
+            window.juiceManager.triggerHitStop(3);
+            window.juiceManager.triggerScreenShake(8, 150);
+            window.juiceManager.createParticles({
+                x: x + 32, y: y + 48,
+                count: 6,
+                color: 'orange',
+                life: 20,
+                speed: 120
+            });
+        }
     }
 
     serialize() {

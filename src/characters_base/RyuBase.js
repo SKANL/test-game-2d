@@ -92,7 +92,22 @@ export default {
             frameRate: 5,
             loop: false,
             onEnd: 'idle',
-            cancels: ['lightPunch', 'mediumPunch', 'hadoken'] // Más opciones de cancel que Ken
+            cancels: ['lightPunch', 'mediumPunch', 'heavyPunch', 'hadoken'] // Más opciones de cancel que Ken
+        },
+
+        heavyPunch: {
+            frames: [
+                // Heavy punch de Ryu - más daño y rango que Ken
+                { x: 227, y: 1793, width: 112, height: 96, type: 'startup', duration: 30 },
+                { x: 340, y: 1793, width: 112, height: 96, type: 'active', duration: 30, 
+                    hitbox: { x: 38, y: 16, w: 36, h: 28, damage: 28 } // Mayor daño y rango que Ken
+                },
+                { x: 453, y: 1793, width: 112, height: 96, type: 'recovery', duration: 22 }
+            ],
+            frameRate: 4,
+            loop: false,
+            onEnd: 'idle',
+            cancels: ['hadoken'] // Puede cancelar en hadoken
         },
 
         hadoken: {

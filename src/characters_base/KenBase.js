@@ -91,7 +91,20 @@ export default {
             frameRate: 5,
             loop: false,
             onEnd: 'idle',
-            cancels: ['lightPunch', 'mediumPunch'] // Combos permitidos
+            cancels: ['lightPunch', 'mediumPunch', 'heavyPunch'] // Combos permitidos
+        },
+
+        heavyPunch: {
+            frames: [
+                // Heavy punch - mayor daño, más lento
+                { x: 227, y: 1412, width: 112, height: 96, type: 'startup', duration: 32 },
+                { x: 340, y: 1412, width: 112, height: 96, type: 'active', duration: 32, hitbox: { x: 35, y: 18, w: 32, h: 24, damage: 25 } },
+                { x: 453, y: 1412, width: 112, height: 96, type: 'recovery', duration: 24 }
+            ],
+            frameRate: 4,
+            loop: false,
+            onEnd: 'idle',
+            cancels: [] // No se puede cancelar en combos
         },
 
         hadoken: {

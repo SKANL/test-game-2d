@@ -124,6 +124,16 @@ export default class GameManager {
     handleRoundEnd() {
         console.log('🏁 Fin de ronda detectado');
         
+        // Mostrar resultado de la ronda por 3 segundos
+        setTimeout(() => {
+            if (this.gameState.isGameOver()) {
+                this.handleMatchEnd();
+            } else {
+                console.log('🔄 Reiniciando nueva ronda...');
+                this.gameState.resetRound();
+            }
+        }, 3000); // 3 segundos para ver el resultado
+        
         // Notificar a BattleScene si está registrada
         if (this.battleSceneRef && typeof this.battleSceneRef.onRoundReset === 'function') {
             this.battleSceneRef.onRoundReset();

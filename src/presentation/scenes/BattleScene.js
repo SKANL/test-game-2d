@@ -277,6 +277,7 @@ export default class BattleScene {
      */
     setupControllers() {
         console.log('🎮 Configurando controladores...');
+        console.log(`🎯 Modo de juego detectado: '${this.gameMode}'`);
         
         // Controlador del jugador 1 (humano)
         const p1Controller = new PlayerController(
@@ -288,11 +289,12 @@ export default class BattleScene {
         
         // Controlador del jugador 2 (IA o humano según modo)
         let p2Controller;
-        if (this.gameMode === 'vs-ai') {
+        if (this.gameMode === 'vs-ai' || this.gameMode === 'cpu') {
             p2Controller = new AIController(
                 this.characters[1], 
                 'normal' // dificultad
             );
+            console.log('🤖 Configurando AIController para jugador 2');
         } else {
             p2Controller = new PlayerController(
                 2, // playerIndex
@@ -300,6 +302,7 @@ export default class BattleScene {
                 this.inputManager,
                 this.audioManager
             );
+            console.log('👤 Configurando PlayerController para jugador 2');
         }
         
         this.controllers = [p1Controller, p2Controller];

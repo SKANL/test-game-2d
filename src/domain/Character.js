@@ -277,6 +277,9 @@ export default class Character {
             this.state = newState;
             this.currentFrameIndex = 0;
             this.frameTimer = 0;
+            
+            // CRÍTICO: Resetear flag de ataque al cambiar estado
+            this.attackHasHit = false;
         }
     }
 
@@ -304,13 +307,94 @@ export default class Character {
             case 'attack1':
                 this.performAttack('lightPunch');
                 break;
+            case 'attack2':
+                this.performAttack('heavyPunch');
+                break;
             case 'jump':
                 this.performJump();
                 break;
             case 'stop':
                 this.stopMovement();
                 break;
+            // Acciones mejoradas para IA
+            case 'antiair':
+                this.performAntiAir();
+                break;
+            case 'combo':
+                this.performComboAttack();
+                break;
+            case 'projectile':
+                this.performProjectile();
+                break;
+            case 'heavyPunch':
+                this.performAttack('heavyPunch');
+                break;
+            case 'down':
+                this.crouch();
+                break;
+            default:
+                if (Math.random() < 0.01) {
+                    console.warn(`⚠️ Acción desconocida: ${inputAction}`);
+                }
+                break;
         }
+    }
+
+    /**
+     * Realizar anti-air específico (SOLID - SRP)
+     */
+    performAntiAir() {
+        if (this.canAttack()) {
+            this.velocity.x = 0;
+            this.attackHasHit = false;
+            // Usar el mejor anti-air disponible
+            const antiAirMove = this.config.animations.antiAir ? 'antiAir' : 'lightPunch';
+            this.changeState(antiAirMove);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Realizar ataque de combo fluido (SOLID - SRP)
+     */
+    performComboAttack() {
+        if (this.canAttack()) {
+            this.velocity.x = 0;
+            this.attackHasHit = false;
+            // Alternar entre ataques para combos
+            const comboMoves = ['lightPunch', 'heavyPunch'];
+            const move = comboMoves[Math.floor(Math.random() * comboMoves.length)];
+            this.changeState(move);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Realizar proyectil (SOLID - SRP)
+     */
+    performProjectile() {
+        if (this.canAttack() && this.config.animations.hadoken) {
+            this.velocity.x = 0;
+            this.attackHasHit = false;
+            this.changeState('hadoken');
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Agacharse (SOLID - SRP)
+     */
+    crouch() {
+        if (this.canMove() && this.isGrounded) {
+            this.velocity.x = 0;
+            const crouchState = this.config.animations.crouch ? 'crouch' : 'idle';
+            this.changeState(crouchState);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -448,11 +532,16 @@ export default class Character {
     reset() {
         this.health = this.maxHealth;
         this.superMeter = 0;
+        this.position = { x: this.id === 'p1' ? 200 : 800, y: 300 };
         this.velocity = { x: 0, y: 0 };
         this.isGrounded = true;
         this.attackHasHit = false;
         this.inputQueue = [];
+        this.isFacingRight = this.id === 'p1';
+        this.isFlipped = !this.isFacingRight;
         this.changeState('idle');
+        
+        console.log(`🔄 ${this.name} reseteado completamente`);
     }
 
     /**
