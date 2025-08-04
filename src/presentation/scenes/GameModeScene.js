@@ -1,7 +1,10 @@
 /**
  * GameModeScene - Selección épica de modo de juego con anime.js
  * Implementación EXACTA basada en ejemplos funcionales
+ * RESPONSIVE: Adaptado para todos los dispositivos con ResponsiveUtils
  */
+import ResponsiveUtils from '../../infrastructure/ResponsiveUtils.js';
+
 export default class GameModeScene {
     constructor(onModeSelected) {
         this.onModeSelected = onModeSelected;
@@ -9,6 +12,9 @@ export default class GameModeScene {
         this.container = null;
         this.particleCanvas = null;
         this.animationId = null;
+        
+        // Inicializar ResponsiveUtils
+        ResponsiveUtils.init();
     }
 
     render() {
@@ -17,9 +23,15 @@ export default class GameModeScene {
             gameCanvas.style.display = 'none';
         }
 
-        // Crear el contenedor principal - ÉPICO GAME MODE STYLE
+        // Aplicar estilos responsivos usando ResponsiveUtils
+        const deviceType = ResponsiveUtils.getDeviceType();
+
+        // Crear el contenedor principal RESPONSIVO - ÉPICO GAME MODE STYLE
         this.container = document.createElement('div');
         this.container.id = 'game-mode-scene-container';
+        this.container.className = 'responsive-container gamemode-container';
+        
+        // Aplicar estilos específicos responsivos para GameMode
         this.container.style.cssText = `
             position: fixed;
             top: 0;
@@ -37,15 +49,17 @@ export default class GameModeScene {
             align-items: center;
             z-index: 1000;
             font-family: 'Inter', sans-serif;
-            overflow: hidden;
-            padding: 2rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+            padding: ${deviceType === 'mobile' ? 'clamp(1rem, 5vw, 1.5rem)' : 'clamp(1rem, 4vw, 2rem)'};
+            gap: ${deviceType === 'mobile' ? '1rem' : '1.5rem'};
+            box-sizing: border-box;
         `;
 
-        // Canvas para partículas de fondo
+        // Canvas para partículas de fondo RESPONSIVO
         this.particleCanvas = document.createElement('canvas');
         this.particleCanvas.id = 'gamemode-particles-canvas';
-        this.particleCanvas.width = window.innerWidth;
-        this.particleCanvas.height = window.innerHeight;
+        this.particleCanvas.className = 'responsive-canvas';
         this.particleCanvas.style.cssText = `
             position: absolute;
             top: 0;
@@ -55,40 +69,54 @@ export default class GameModeScene {
             z-index: 1;
             pointer-events: none;
         `;
+        
+        // Configurar canvas responsivo usando ResponsiveUtils
+        ResponsiveUtils.setupResponsiveCanvas(this.particleCanvas);
 
-        // Título épico
+        // Título épico RESPONSIVO MEJORADO
         const title = document.createElement('h1');
-        title.textContent = 'SELECCIONA TU MODO DE BATALLA';
+        title.textContent = deviceType === 'mobile' ? 'SELECCIONA MODO' : 'SELECCIONA TU MODO DE BATALLA';
+        title.className = 'responsive-title gamemode-title';
         title.style.cssText = `
             font-family: 'Orbitron', monospace;
-            font-size: 3rem;
+            font-size: ${deviceType === 'mobile' ? 'clamp(1rem, 6vw, 1.8rem)' : 'clamp(1.5rem, 5vw, 3rem)'};
             font-weight: 900;
             color: #fff;
-            margin-bottom: 3rem;
+            margin-bottom: ${deviceType === 'mobile' ? '1rem' : 'clamp(1.5rem, 4vw, 2.5rem)'};
             text-shadow: 
                 0 0 10px var(--primary-glow),
                 0 0 20px var(--primary-glow),
                 0 0 30px rgba(0, 242, 255, 0.5);
             text-align: center;
-            letter-spacing: 3px;
+            letter-spacing: ${deviceType === 'mobile' ? '1px' : 'clamp(1px, 0.5vw, 3px)'};
             text-transform: uppercase;
             z-index: 3;
             position: relative;
             opacity: 0;
             transform: translateY(-30px);
+            max-width: 100%;
+            word-wrap: break-word;
+            padding: 0 1rem;
+            box-sizing: border-box;
         `;
 
-        // Contenedor de modos - EXACTO como el ejemplo
+        // Contenedor de modos RESPONSIVO MEJORADO
         const modesContainer = document.createElement('div');
-        modesContainer.className = 'modes-container';
+        modesContainer.className = 'modes-container responsive-grid';
         modesContainer.style.cssText = `
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            max-width: 1200px;
+            grid-template-columns: ${deviceType === 'mobile' ? 
+                '1fr' : 
+                'repeat(auto-fit, minmax(min(280px, 100%), 1fr))'};
+            gap: ${deviceType === 'mobile' ? '1rem' : 'clamp(1rem, 3vw, 2rem)'};
             width: 100%;
+            max-width: ${deviceType === 'mobile' ? '100%' : 'min(95vw, 1200px)'};
             z-index: 3;
             position: relative;
+            padding: ${deviceType === 'mobile' ? '0.5rem' : '1rem'};
+            box-sizing: border-box;
+            overflow: visible;
+            margin: ${deviceType === 'mobile' ? '0.5rem' : '1rem'};
         `;
 
         // Modos de juego - ÉPICOS
@@ -140,20 +168,21 @@ export default class GameModeScene {
             modesContainer.appendChild(modeCard);
         });
 
-        // Botón de volver
+        // Botón de volver RESPONSIVO
         const backButton = document.createElement('button');
         backButton.textContent = '← VOLVER';
+        backButton.className = 'responsive-button back-button';
         backButton.style.cssText = `
             position: absolute;
-            top: 2rem;
-            left: 2rem;
+            top: ${deviceType === 'mobile' ? '1rem' : '2rem'};
+            left: ${deviceType === 'mobile' ? '1rem' : '2rem'};
             background: transparent;
             border: 2px solid var(--secondary-glow);
             color: var(--secondary-glow);
-            padding: 12px 20px;
+            padding: ${deviceType === 'mobile' ? '10px 16px' : '12px 20px'};
             border-radius: 8px;
             font-family: 'Orbitron', monospace;
-            font-size: 1rem;
+            font-size: ${deviceType === 'mobile' ? '0.85rem' : '1rem'};
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -162,6 +191,8 @@ export default class GameModeScene {
             z-index: 4;
             opacity: 0;
             transform: translateX(-20px);
+            min-height: ${deviceType === 'mobile' ? '44px' : 'auto'};
+            touch-action: manipulation;
         `;
 
         this.setupBackButton(backButton);
@@ -211,15 +242,17 @@ export default class GameModeScene {
     }
 
     createModeCard(mode, index) {
+        const deviceType = ResponsiveUtils.getDeviceType();
+        
         const card = document.createElement('div');
-        card.className = 'mode-card';
+        card.className = 'mode-card responsive-card';
         card.dataset.mode = mode.id;
         card.style.cssText = `
             background: rgba(0, 0, 0, 0.3);
             background-image: ${mode.gradient};
             border: 2px solid ${mode.color};
-            border-radius: 15px;
-            padding: 2rem;
+            border-radius: ${deviceType === 'mobile' ? '10px' : '15px'};
+            padding: ${deviceType === 'mobile' ? '1rem' : '1.5rem'};
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -228,9 +261,15 @@ export default class GameModeScene {
                 0 4px 20px rgba(0, 0, 0, 0.3),
                 0 0 30px ${mode.color}20;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
             opacity: 0;
             transform: translateY(50px) scale(0.9);
+            min-height: ${deviceType === 'mobile' ? '220px' : '280px'};
+            max-width: 100%;
+            width: 100%;
+            box-sizing: border-box;
+            touch-action: manipulation;
+            margin: ${deviceType === 'mobile' ? '0.25rem' : '0.5rem'};
         `;
 
         // Efecto de brillo interno
@@ -247,55 +286,70 @@ export default class GameModeScene {
             pointer-events: none;
         `;
 
-        // Icono épico
+        // Icono épico RESPONSIVO
         const icon = document.createElement('div');
         icon.textContent = mode.icon;
+        icon.className = 'mode-icon';
         icon.style.cssText = `
-            font-size: 4rem;
-            margin-bottom: 1rem;
+            font-size: ${deviceType === 'mobile' ? '3rem' : '4rem'};
+            margin-bottom: ${deviceType === 'mobile' ? '0.8rem' : '1rem'};
             filter: drop-shadow(0 0 10px ${mode.color});
         `;
 
-        // Título del modo
+        // Título del modo RESPONSIVO
         const title = document.createElement('h3');
         title.textContent = mode.title;
+        title.className = 'mode-title';
         title.style.cssText = `
             font-family: 'Orbitron', monospace;
-            font-size: 1.5rem;
+            font-size: ${deviceType === 'mobile' ? 'clamp(1rem, 4vw, 1.2rem)' : 'clamp(1.2rem, 2.5vw, 1.5rem)'};
             font-weight: 700;
             color: ${mode.color};
             margin-bottom: 0.5rem;
             text-shadow: 0 0 10px ${mode.color};
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: ${deviceType === 'mobile' ? '0.5px' : '1px'};
+            line-height: 1.2;
+            overflow-wrap: break-word;
+            hyphens: auto;
+            word-break: break-word;
         `;
 
-        // Subtítulo
+        // Subtítulo RESPONSIVO
         const subtitle = document.createElement('div');
         subtitle.textContent = mode.subtitle;
+        subtitle.className = 'mode-subtitle';
         subtitle.style.cssText = `
             font-family: 'Inter', sans-serif;
-            font-size: 0.9rem;
+            font-size: ${deviceType === 'mobile' ? 'clamp(0.7rem, 3vw, 0.8rem)' : 'clamp(0.8rem, 2vw, 0.9rem)'};
             color: var(--text-color);
-            margin-bottom: 1rem;
+            margin-bottom: ${deviceType === 'mobile' ? '0.8rem' : '1rem'};
             font-weight: 500;
             opacity: 0.8;
+            overflow-wrap: break-word;
+            hyphens: auto;
+            word-break: break-word;
         `;
 
-        // Descripción
+        // Descripción RESPONSIVA
         const description = document.createElement('p');
         description.textContent = mode.description;
+        description.className = 'mode-description';
         description.style.cssText = `
             font-family: 'Inter', sans-serif;
             color: var(--text-color);
-            margin-bottom: 1.5rem;
-            line-height: 1.6;
-            font-size: 0.95rem;
+            font-size: ${deviceType === 'mobile' ? 'clamp(0.75rem, 3.5vw, 0.85rem)' : 'clamp(0.85rem, 2.2vw, 0.95rem)'};
+            line-height: ${deviceType === 'mobile' ? '1.4' : '1.5'};
+            margin-bottom: ${deviceType === 'mobile' ? '1rem' : '1.5rem'};
             opacity: 0.9;
+            overflow-wrap: break-word;
+            hyphens: auto;
+            word-break: break-word;
         `;
 
-        // Features list
+        // Features list RESPONSIVO
         const featuresList = document.createElement('ul');
+        featuresList.className = 'features-list';
         featuresList.style.cssText = `
             list-style: none;
             padding: 0;
@@ -305,14 +359,18 @@ export default class GameModeScene {
 
         mode.features.forEach(feature => {
             const li = document.createElement('li');
+            li.className = 'feature-item';
             li.style.cssText = `
                 color: var(--text-color);
                 margin-bottom: 0.5rem;
                 padding-left: 1.5rem;
                 position: relative;
                 font-family: 'Inter', sans-serif;
-                font-size: 0.9rem;
+                font-size: ${deviceType === 'mobile' ? 'clamp(0.7rem, 3vw, 0.8rem)' : 'clamp(0.8rem, 2vw, 0.9rem)'};
                 opacity: 0.8;
+                overflow-wrap: break-word;
+                hyphens: auto;
+                word-break: break-word;
             `;
 
             li.innerHTML = `
@@ -329,12 +387,13 @@ export default class GameModeScene {
             featuresList.appendChild(li);
         });
 
-        // Botón de selección
+        // Botón de selección RESPONSIVO
         const selectButton = document.createElement('button');
         selectButton.textContent = 'SELECCIONAR';
+        selectButton.className = 'select-button responsive-button';
         selectButton.style.cssText = `
             width: 100%;
-            padding: 12px;
+            padding: ${deviceType === 'mobile' ? '10px' : '12px'};
             background: transparent;
             border: 2px solid ${mode.color};
             color: ${mode.color};
@@ -346,6 +405,9 @@ export default class GameModeScene {
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-top: 1rem;
+            min-height: ${deviceType === 'mobile' ? '44px' : 'auto'};
+            touch-action: manipulation;
+            font-size: ${deviceType === 'mobile' ? '0.85rem' : '1rem'};
         `;
 
         this.setupButtonEvents(selectButton, mode);
@@ -383,13 +445,15 @@ export default class GameModeScene {
     }
 
     setupCardEvents(card, glowOverlay, mode) {
+        const deviceType = ResponsiveUtils.getDeviceType();
+        
         card.addEventListener('mouseenter', () => {
             glowOverlay.style.opacity = '1';
             
             if (typeof anime !== 'undefined') {
                 anime({
                     targets: card,
-                    scale: 1.05,
+                    scale: deviceType === 'mobile' ? 1.02 : 1.05,
                     boxShadow: `0 10px 30px rgba(0, 0, 0, 0.4), 0 0 40px ${mode.color}40`,
                     duration: 300,
                     easing: 'easeOutQuad'
@@ -622,6 +686,11 @@ export default class GameModeScene {
     cleanup() {
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
+        }
+
+        // Cleanup ResponsiveUtils canvas handlers
+        if (this.particleCanvas) {
+            ResponsiveUtils.cleanup(this.particleCanvas);
         }
 
         if (this.container) {

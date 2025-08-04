@@ -3,6 +3,7 @@
  * Integra efectos avanzados de anime.js
  */
 import VisualEffectsManager from '../VisualEffectsManager.js';
+import ResponsiveUtils from '../../infrastructure/ResponsiveUtils.js';
 
 export default class GameOverScene {
     constructor(battleResult, onPlayAgain, onMainMenu) {
@@ -29,6 +30,7 @@ export default class GameOverScene {
 
         const container = document.createElement('div');
         container.id = 'gameover-scene-container';
+        container.className = 'responsive-container';
         container.style.cssText = `
             position: fixed;
             top: 0;
@@ -47,6 +49,7 @@ export default class GameOverScene {
             font-family: 'Orbitron', monospace;
             overflow: hidden;
             z-index: 1000;
+            padding: var(--spacing-lg);
         `;
 
         // Canvas para confetti y efectos

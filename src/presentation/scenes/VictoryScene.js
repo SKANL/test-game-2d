@@ -2,6 +2,8 @@
  * VictoryScene - Pantalla de victoria con puntuación y opciones
  * Implementa interfaz Scene con métodos compatibles con SceneManager
  */
+import ResponsiveUtils from '../../infrastructure/ResponsiveUtils.js';
+
 export default class VictoryScene {
     constructor(dataOrGameManager) {
         console.log('🎉 VictoryScene constructor llamado con:', dataOrGameManager);
@@ -136,6 +138,9 @@ export default class VictoryScene {
                 return;
             }
         }
+
+        // Configurar canvas responsivo
+        ResponsiveUtils.setupResponsiveCanvas(this.canvas);
 
         try {
             // Limpiar canvas

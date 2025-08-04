@@ -3,6 +3,7 @@
  * Integra efectos de los ejemplos de anime.js
  */
 import VisualEffectsManager from '../VisualEffectsManager.js';
+import ResponsiveUtils from '../../infrastructure/ResponsiveUtils.js';
 
 export default class LoadingScene {
     constructor(onComplete) {
@@ -46,6 +47,7 @@ export default class LoadingScene {
 
         const container = document.createElement('div');
         container.id = 'loading-scene-container';
+        container.className = 'responsive-container';
         container.style.cssText = `
             position: fixed;
             top: 0;
@@ -63,13 +65,12 @@ export default class LoadingScene {
             z-index: 1000;
             font-family: 'Orbitron', monospace;
             overflow: hidden;
+            padding: var(--spacing-lg);
         `;
 
-        // Canvas para partículas de fondo
+        // Canvas para partículas de fondo RESPONSIVO
         const particleCanvas = document.createElement('canvas');
         particleCanvas.id = 'loading-particles';
-        particleCanvas.width = window.innerWidth;
-        particleCanvas.height = window.innerHeight;
         particleCanvas.style.cssText = `
             position: absolute;
             top: 0;
@@ -79,36 +80,41 @@ export default class LoadingScene {
             z-index: 1;
             pointer-events: none;
         `;
+        
+        // Configurar canvas responsivo
+        ResponsiveUtils.setupResponsiveCanvas(particleCanvas);
 
-        // Logo/Título del juego
+        // Logo/Título del juego RESPONSIVO
         const logo = document.createElement('div');
         logo.className = 'loading-logo';
         logo.innerHTML = 'COMBAT ENGINE';
         logo.style.cssText = `
-            font-size: 3.5rem;
+            font-size: var(--font-size-4xl);
             font-weight: 900;
             color: #fff;
             text-shadow: 0 0 20px var(--primary-glow), 0 0 40px var(--primary-glow);
-            margin-bottom: 3rem;
+            margin-bottom: var(--spacing-xl);
             position: relative;
             z-index: 10;
-            letter-spacing: 3px;
+            letter-spacing: clamp(2px, 1vw, 3px);
+            text-align: center;
         `;
 
         // Convertir texto en letras individuales para animación
         logo.innerHTML = logo.textContent.replace(/\S/g, "<span class='logo-letter'>$&</span>");
 
-        // Contenedor de carga
+        // Contenedor de carga RESPONSIVO
         const loadingContainer = document.createElement('div');
         loadingContainer.className = 'loading-container';
         loadingContainer.style.cssText = `
             position: relative;
-            width: 500px;
+            width: var(--container-md);
+            max-width: 90vw;
             z-index: 10;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2rem;
+            gap: var(--spacing-lg);
         `;
 
         // Barra de progreso

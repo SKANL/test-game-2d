@@ -4,6 +4,7 @@
  * Eliminadas variables globales innecesarias y mejorado manejo de errores
  */
 import ApplicationController from './application/ApplicationController.js';
+import ResponsiveUtils from './infrastructure/ResponsiveUtils.js';
 
 /**
  * Función principal de inicialización con manejo robusto de errores
@@ -11,6 +12,10 @@ import ApplicationController from './application/ApplicationController.js';
 async function initializeGame() {
     try {
         console.log('🚀 Iniciando aplicación...');
+        
+        // Inicializar sistema responsivo
+        ResponsiveUtils.init();
+        console.log('📱 Sistema responsivo inicializado');
         
         // Esperar a que anime.js esté disponible
         await waitForAnime();

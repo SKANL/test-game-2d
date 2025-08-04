@@ -16,6 +16,7 @@ import AudioManager from '../../infrastructure/AudioManager.js';
 import Character from '../../domain/Character.js';
 import JuiceManager from '../../infrastructure/JuiceManager.js';
 import VisualEffectsManager from '../VisualEffectsManager.js';
+import ResponsiveUtils from '../../infrastructure/ResponsiveUtils.js';
 
 export default class BattleScene {
     constructor(battleConfig, gameManager = null) {
@@ -348,10 +349,12 @@ export default class BattleScene {
             return;
         }
         
-        // Mostrar canvas si está oculto
+        // Mostrar canvas si está oculto y configurar responsive
         const canvas = document.getElementById('gameCanvas');
         if (canvas) {
             canvas.style.display = 'block';
+            // Asegurar que el canvas sea responsivo
+            ResponsiveUtils.setupResponsiveCanvas(canvas);
         }
         
         // Iniciar gameloop de renderizado

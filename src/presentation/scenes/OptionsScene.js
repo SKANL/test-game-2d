@@ -1,8 +1,10 @@
 /**
  * OptionsScene - Pantalla de configuración épica con efectos de anime.js
  * Implementación EXACTA basada en ejemplos funcionales
+ * RESPONSIVE: Adaptado para todos los dispositivos con ResponsiveUtils
  */
 import UserPreferencesManager from '../../application/UserPreferencesManager.js';
+import ResponsiveUtils from '../../infrastructure/ResponsiveUtils.js';
 
 export default class OptionsScene {
     constructor(onBack) {
@@ -17,6 +19,9 @@ export default class OptionsScene {
     }
 
     async init() {
+        // Inicializar ResponsiveUtils
+        ResponsiveUtils.init();
+        
         this.preferences = UserPreferencesManager.getPreferences();
     }
 
@@ -30,9 +35,15 @@ export default class OptionsScene {
             gameCanvas.style.display = 'none';
         }
 
-        // Crear el contenedor principal - EXACTO como el ejemplo
+        // Crear el contenedor principal - RESPONSIVO
         this.container = document.createElement('div');
         this.container.id = 'options-scene-container';
+        this.container.className = 'responsive-options-container';
+        
+        // Aplicar estilos responsivos usando ResponsiveUtils
+        const deviceType = ResponsiveUtils.getDeviceType();
+        const responsiveStyles = ResponsiveUtils.getResponsiveContainerStyles(deviceType);
+        
         this.container.style.cssText = `
             position: fixed;
             top: 0;
@@ -49,15 +60,15 @@ export default class OptionsScene {
             align-items: center;
             z-index: 1000;
             font-family: 'Inter', sans-serif;
-            overflow: hidden;
-            padding: 2rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+            padding: clamp(1rem, 4vw, 2rem);
+            ${responsiveStyles}
         `;
 
-        // Canvas para partículas de fondo
+        // Canvas para partículas de fondo RESPONSIVO
         this.particleCanvas = document.createElement('canvas');
         this.particleCanvas.id = 'options-particles-canvas';
-        this.particleCanvas.width = window.innerWidth;
-        this.particleCanvas.height = window.innerHeight;
         this.particleCanvas.style.cssText = `
             position: absolute;
             top: 0;
@@ -67,32 +78,39 @@ export default class OptionsScene {
             z-index: 1;
             pointer-events: none;
         `;
+        
+        // Configurar canvas responsivo usando ResponsiveUtils
+        ResponsiveUtils.setupResponsiveCanvas(this.particleCanvas);
 
-        // Título
+        // Título RESPONSIVO
         const title = document.createElement('h1');
-        title.textContent = 'CONFIGURACIÓN';
+        title.textContent = deviceType === 'mobile' ? 'OPCIONES' : 'CONFIGURACIÓN';
+        title.className = 'responsive-options-title';
         title.style.cssText = `
             font-family: 'Orbitron', monospace;
-            font-size: 3rem;
+            font-size: clamp(1.5rem, 6vw, 3rem);
             font-weight: 900;
             color: #fff;
-            margin-bottom: 2rem;
+            margin-bottom: clamp(1rem, 3vw, 2rem);
             text-shadow: 0 0 10px var(--primary-glow), 0 0 20px var(--primary-glow);
             opacity: 0;
             transform: translateY(-30px);
             z-index: 3;
+            text-align: center;
+            word-break: break-word;
         `;
 
-        // Contenedor de opciones - EXACTO como el ejemplo
+        // Contenedor de opciones - RESPONSIVO
         const optionsContainer = document.createElement('div');
-        optionsContainer.className = 'options-container';
+        optionsContainer.className = 'options-container responsive-options-content';
         optionsContainer.style.cssText = `
             width: 100%;
-            max-width: 800px;
+            max-width: ${deviceType === 'mobile' ? '95vw' : 'min(90vw, 800px)'};
+            min-height: ${deviceType === 'mobile' ? '60vh' : '50vh'};
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--primary-glow);
-            border-radius: 15px;
-            padding: 2rem;
+            border-radius: clamp(10px, 2vw, 15px);
+            padding: clamp(1rem, 3vw, 2rem);
             box-shadow: 
                 0 0 30px rgba(0, 242, 255, 0.3),
                 inset 0 0 30px rgba(0, 242, 255, 0.1);
@@ -101,34 +119,38 @@ export default class OptionsScene {
             position: relative;
             opacity: 0;
             transform: scale(0.9) translateY(20px);
+            overflow: hidden;
         `;
 
         // Tabs
         const tabs = this.createTabs();
         const tabContent = this.createTabContent();
 
-        // Botón de volver
+        // Botón de volver RESPONSIVO
         const backButton = document.createElement('button');
-        backButton.textContent = '← VOLVER';
+        backButton.textContent = deviceType === 'mobile' ? '← VOLVER' : '← VOLVER';
+        backButton.className = 'responsive-back-btn';
         backButton.style.cssText = `
             position: absolute;
-            top: 2rem;
-            left: 2rem;
+            top: clamp(1rem, 3vw, 2rem);
+            left: clamp(1rem, 3vw, 2rem);
             background: transparent;
             border: 2px solid var(--secondary-glow);
             color: var(--secondary-glow);
-            padding: 12px 20px;
-            border-radius: 8px;
+            padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 20px);
+            border-radius: clamp(6px, 1vw, 8px);
             font-family: 'Orbitron', monospace;
-            font-size: 1rem;
+            font-size: clamp(0.8rem, 2vw, 1rem);
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: clamp(0.5px, 0.2vw, 1px);
             z-index: 4;
             opacity: 0;
             transform: translateX(-20px);
+            min-height: 44px; /* Touch-friendly */
+            white-space: nowrap;
         `;
 
         this.setupBackButton(backButton);
@@ -149,13 +171,19 @@ export default class OptionsScene {
     }
 
     createTabs() {
+        const deviceType = ResponsiveUtils.getDeviceType();
+        const isMobile = deviceType === 'mobile';
+        
         const tabs = document.createElement('div');
-        tabs.className = 'tabs';
+        tabs.className = 'tabs responsive-options-tabs';
         tabs.style.cssText = `
             display: flex;
             border-bottom: 1px solid var(--border-color);
             position: relative;
-            margin-bottom: 2rem;
+            margin-bottom: clamp(1rem, 3vw, 2rem);
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            ${isMobile ? 'justify-content: center;' : ''}
         `;
 
         const tabUnderline = document.createElement('div');
@@ -171,18 +199,18 @@ export default class OptionsScene {
         `;
 
         const tabData = [
-            { id: 'video', text: 'Video' },
-            { id: 'audio', text: 'Audio' },
-            { id: 'game', text: 'Juego' }
+            { id: 'video', text: isMobile ? 'Video' : 'Video' },
+            { id: 'audio', text: isMobile ? 'Audio' : 'Audio' },
+            { id: 'game', text: isMobile ? 'Juego' : 'Juego' }
         ];
 
         tabData.forEach((tabInfo, index) => {
             const tab = document.createElement('div');
-            tab.className = `tab ${tabInfo.id === this.currentTab ? 'active' : ''}`;
+            tab.className = `tab responsive-tab ${tabInfo.id === this.currentTab ? 'active' : ''}`;
             tab.dataset.tab = tabInfo.id;
             tab.textContent = tabInfo.text;
             tab.style.cssText = `
-                padding: 15px 20px;
+                padding: clamp(10px, 2vw, 15px) clamp(15px, 3vw, 20px);
                 cursor: pointer;
                 color: ${tabInfo.id === this.currentTab ? 'var(--primary-glow)' : 'var(--text-color)'};
                 transition: all 0.3s ease;
@@ -191,7 +219,11 @@ export default class OptionsScene {
                 font-family: 'Orbitron', monospace;
                 font-weight: 600;
                 text-transform: uppercase;
-                letter-spacing: 1px;
+                letter-spacing: clamp(0.5px, 0.2vw, 1px);
+                font-size: clamp(0.8rem, 2vw, 1rem);
+                white-space: nowrap;
+                flex-shrink: 0;
+                ${isMobile ? 'flex: 1; text-align: center; min-width: fit-content;' : ''}
             `;
 
             tab.addEventListener('click', () => {
@@ -211,9 +243,11 @@ export default class OptionsScene {
         const tabContentContainer = document.createElement('div');
         tabContentContainer.className = 'tab-content-container';
         tabContentContainer.style.cssText = `
-            min-height: 300px;
+            min-height: clamp(250px, 40vh, 300px);
             position: relative;
             width: 100%;
+            overflow-y: auto;
+            max-height: 60vh;
         `;
 
         // Contenido para pestaña de Video
@@ -244,7 +278,7 @@ export default class OptionsScene {
     createVideoTabContent() {
         const content = document.createElement('div');
         content.style.cssText = `
-            padding: 1rem;
+            padding: clamp(0.5rem, 2vw, 1rem);
         `;
 
         // Debug Mode Toggle
@@ -281,7 +315,7 @@ export default class OptionsScene {
     createAudioTabContent() {
         const content = document.createElement('div');
         content.style.cssText = `
-            padding: 1rem;
+            padding: clamp(0.5rem, 2vw, 1rem);
         `;
 
         // Master Volume
@@ -324,7 +358,7 @@ export default class OptionsScene {
     createGameTabContent() {
         const content = document.createElement('div');
         content.style.cssText = `
-            padding: 1rem;
+            padding: clamp(0.5rem, 2vw, 1rem);
         `;
 
         // Difficulty Selection
@@ -354,14 +388,15 @@ export default class OptionsScene {
             this.updatePreference('gameplay.inputBufferTime', parseInt(e.target.value));
         });
 
-        // Controls Section
+        // Controls Section RESPONSIVO
         const controlsTitle = document.createElement('h3');
         controlsTitle.textContent = 'Controles Jugador 1';
         controlsTitle.style.cssText = `
             color: var(--primary-glow);
             font-family: 'Orbitron', monospace;
-            margin: 2rem 0 1rem 0;
+            margin: clamp(1rem, 3vw, 2rem) 0 clamp(0.5rem, 2vw, 1rem) 0;
             text-shadow: 0 0 5px var(--primary-glow);
+            font-size: clamp(1rem, 3vw, 1.2rem);
         `;
 
         content.appendChild(difficultyGroup);
@@ -400,20 +435,21 @@ export default class OptionsScene {
         const controlGroup = document.createElement('div');
         controlGroup.className = 'control-group';
         controlGroup.style.cssText = `
-            margin-bottom: 1.5rem;
+            margin-bottom: clamp(1rem, 3vw, 1.5rem);
             opacity: 0;
             transform: translateY(10px);
+            display: flex;
+            flex-direction: column;
+            gap: clamp(0.3rem, 1vw, 0.5rem);
         `;
 
         const label = document.createElement('label');
         label.textContent = labelText;
         label.style.cssText = `
-            display: block;
-            margin-bottom: 0.5rem;
             color: var(--text-color);
             font-family: 'Orbitron', monospace;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
         `;
 
         let control;
@@ -457,21 +493,22 @@ export default class OptionsScene {
         const customCheckbox = document.createElement('div');
         customCheckbox.className = 'checkbox-custom';
         customCheckbox.style.cssText = `
-            width: 20px;
-            height: 20px;
+            width: clamp(16px, 3vw, 20px);
+            height: clamp(16px, 3vw, 20px);
             border: 2px solid var(--primary-glow);
             border-radius: 4px;
             position: relative;
-            margin-right: 10px;
+            margin-right: clamp(6px, 2vw, 10px);
             background: rgba(0, 242, 255, 0.1);
             transition: all 0.3s ease;
+            flex-shrink: 0;
         `;
 
         const checkmark = document.createElement('div');
         checkmark.innerHTML = '✓';
         checkmark.style.cssText = `
             color: var(--primary-glow);
-            font-size: 14px;
+            font-size: clamp(12px, 2.5vw, 14px);
             position: absolute;
             top: 50%;
             left: 50%;
@@ -484,6 +521,7 @@ export default class OptionsScene {
         labelText.style.cssText = `
             color: var(--text-color);
             font-family: 'Inter', sans-serif;
+            font-size: clamp(0.8rem, 2vw, 1rem);
         `;
 
         input.addEventListener('change', () => {
@@ -554,12 +592,13 @@ export default class OptionsScene {
         const select = document.createElement('select');
         select.style.cssText = `
             width: 100%;
-            padding: 10px;
+            padding: clamp(8px, 2vw, 10px);
             background: rgba(0, 242, 255, 0.1);
             border: 1px solid var(--primary-glow);
             border-radius: 5px;
             color: var(--text-color);
             font-family: 'Inter', sans-serif;
+            font-size: clamp(0.8rem, 2vw, 1rem);
             box-shadow: 0 0 10px rgba(0, 242, 255, 0.3) inset;
             transition: all 0.3s ease;
         `;
@@ -582,7 +621,7 @@ export default class OptionsScene {
         input.placeholder = 'Presiona una tecla...';
         input.style.cssText = `
             width: 100%;
-            padding: 10px;
+            padding: clamp(8px, 2vw, 10px);
             background: rgba(255, 0, 193, 0.1);
             border: 1px solid var(--secondary-glow);
             border-radius: 5px;
@@ -590,6 +629,7 @@ export default class OptionsScene {
             font-family: 'Orbitron', monospace;
             text-align: center;
             font-weight: 600;
+            font-size: clamp(0.8rem, 2vw, 1rem);
             box-shadow: 0 0 10px rgba(255, 0, 193, 0.3) inset;
             transition: all 0.3s ease;
             cursor: pointer;
@@ -930,6 +970,17 @@ export default class OptionsScene {
         if (this.saveTimeout) {
             clearTimeout(this.saveTimeout);
             this.saveTimeout = null;
+        }
+
+        // Cleanup ResponsiveUtils canvas handlers
+        if (this.particleCanvas) {
+            ResponsiveUtils.cleanup(this.particleCanvas);
+        }
+
+        // Remover event listener de resize (obsoleto, manejado por ResponsiveUtils)
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+            this.resizeHandler = null;
         }
 
         // Guardar cambios pendientes antes de limpiar

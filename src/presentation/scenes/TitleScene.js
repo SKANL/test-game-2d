@@ -1,7 +1,10 @@
 /**
  * TitleScene - Pantalla de título épica con efectos visuales avanzados
  * Implementación EXACTA basada en ejemplos funcionales de anime.js
+ * RESPONSIVE: Adaptado para todos los dispositivos con ResponsiveUtils
  */
+import ResponsiveUtils from '../../infrastructure/ResponsiveUtils.js';
+
 export default class TitleScene {
     constructor(onStart, onOptions) {
         this.onStart = onStart;
@@ -16,6 +19,10 @@ export default class TitleScene {
     async init() {
         if (this.isInitialized) return;
         this.isInitialized = true;
+        
+        // Inicializar ResponsiveUtils
+        ResponsiveUtils.init();
+        
         console.log('🎬 TitleScene inicializada');
     }
 
@@ -30,9 +37,15 @@ export default class TitleScene {
             gameCanvas.style.display = 'none';
         }
 
-        // Crear el contenedor principal
+        // Crear el contenedor principal RESPONSIVO
         this.container = document.createElement('div');
         this.container.id = 'title-scene-container';
+        this.container.className = 'responsive-title-container';
+        
+        // Aplicar estilos responsivos usando ResponsiveUtils
+        const deviceType = ResponsiveUtils.getDeviceType();
+        const responsiveStyles = ResponsiveUtils.getResponsiveContainerStyles(deviceType);
+        
         this.container.style.cssText = `
             position: fixed;
             top: 0;
@@ -48,15 +61,14 @@ export default class TitleScene {
             justify-content: center;
             align-items: center;
             z-index: 1000;
-            font-family: 'Orbitron', monospace;
             overflow: hidden;
+            padding: clamp(1rem, 4vw, 2rem);
+            ${responsiveStyles}
         `;
 
-        // Canvas para partículas de fondo (como en el ejemplo)
+        // Canvas para partículas de fondo RESPONSIVO
         const particleCanvas = document.createElement('canvas');
         particleCanvas.id = 'title-particles';
-        particleCanvas.width = window.innerWidth;
-        particleCanvas.height = window.innerHeight;
         particleCanvas.style.cssText = `
             position: absolute;
             top: 0;
@@ -66,21 +78,27 @@ export default class TitleScene {
             z-index: 1;
             pointer-events: none;
         `;
+        
+        // Configurar canvas responsivo usando ResponsiveUtils
+        ResponsiveUtils.setupResponsiveCanvas(particleCanvas);
 
-        // Título principal - EXACTO como en el ejemplo
+        // Título principal RESPONSIVO
         this.titleText = document.createElement('h1');
-        this.titleText.className = 'title-text';
-        this.titleText.textContent = 'FIGHTER 2D';
+        this.titleText.className = 'title-text responsive-title';
+        this.titleText.textContent = deviceType === 'mobile' ? 'FIGHTER' : 'FIGHTER 2D';
         this.titleText.style.cssText = `
             font-family: 'Orbitron', sans-serif;
-            font-size: 4rem;
+            font-size: clamp(2rem, 8vw, 4rem);
             font-weight: 900;
             color: #fff;
             position: relative;
             z-index: 3;
             cursor: pointer;
-            margin-bottom: 2rem;
+            margin-bottom: clamp(1rem, 4vw, 2rem);
             text-shadow: 0 0 10px var(--primary-glow), 0 0 20px var(--primary-glow);
+            text-align: center;
+            word-break: break-word;
+            line-height: 1.1;
         `;
 
         // Convertir texto a letras individuales - EXACTO como en el ejemplo
@@ -96,18 +114,21 @@ export default class TitleScene {
             `;
         });
 
-        // Menú de navegación
+        // Menú de navegación RESPONSIVO
         const menu = document.createElement('div');
-        menu.className = 'title-menu';
+        menu.className = 'title-menu responsive-title-menu';
         menu.style.cssText = `
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: clamp(0.8rem, 2vw, 1rem);
             z-index: 3;
             opacity: 0;
+            width: 100%;
+            max-width: ${deviceType === 'mobile' ? '280px' : '300px'};
+            align-items: center;
         `;
 
-        // Botones del menú
+        // Botones del menú RESPONSIVOS
         const menuItems = [
             { text: 'JUGAR', action: () => this.onStartGame() },
             { text: 'OPCIONES', action: () => this.onOptionsGame() },
@@ -117,22 +138,27 @@ export default class TitleScene {
         menuItems.forEach((item, index) => {
             const button = document.createElement('button');
             button.textContent = item.text;
+            button.className = 'responsive-title-btn';
             button.style.cssText = `
                 background: transparent;
                 border: 2px solid var(--primary-glow);
                 color: var(--primary-glow);
-                padding: 1rem 2rem;
-                border-radius: 8px;
+                padding: clamp(0.8rem, 2vw, 1rem) clamp(1.5rem, 4vw, 2rem);
+                border-radius: clamp(6px, 1vw, 8px);
                 font-family: 'Orbitron', monospace;
-                font-size: 1.1rem;
+                font-size: clamp(0.9rem, 2.5vw, 1.1rem);
                 font-weight: 600;
                 cursor: pointer;
                 transition: all 0.3s ease;
                 text-transform: uppercase;
-                letter-spacing: 2px;
+                letter-spacing: clamp(1px, 0.3vw, 2px);
                 box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
                 opacity: 0;
                 transform: translateY(20px);
+                width: 100%;
+                min-width: ${deviceType === 'mobile' ? '180px' : '200px'};
+                min-height: 44px; /* Touch-friendly */
+                white-space: nowrap;
             `;
 
             button.addEventListener('mouseenter', () => {
@@ -346,6 +372,18 @@ export default class TitleScene {
     cleanup() {
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
+        }
+
+        // Remover event listener de resize del canvas
+        // Cleanup ResponsiveUtils canvas handlers
+        const particleCanvas = document.getElementById('title-particles');
+        if (particleCanvas) {
+            ResponsiveUtils.cleanup(particleCanvas);
+        }
+
+        if (this.canvasResizeHandler) {
+            window.removeEventListener('resize', this.canvasResizeHandler);
+            this.canvasResizeHandler = null;
         }
 
         if (this.container) {

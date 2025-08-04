@@ -1,7 +1,10 @@
 /**
  * AdminDashboardScene - Panel de administración épico con efectos holográficos
  * Implementación EXACTA basada en ejemplos funcionales
+ * RESPONSIVE: Adaptado para todos los dispositivos con ResponsiveUtils
  */
+import ResponsiveUtils from '../../infrastructure/ResponsiveUtils.js';
+
 export default class AdminDashboardScene {
     constructor(onLogout) {
         this.onLogout = onLogout;
@@ -19,6 +22,9 @@ export default class AdminDashboardScene {
     }
 
     async init() {
+        // Inicializar ResponsiveUtils
+        ResponsiveUtils.init();
+        
         this.apiClient = window.gameManager?.apiClient;
         
         if (this.apiClient) {
@@ -42,9 +48,15 @@ export default class AdminDashboardScene {
             gameCanvas.style.display = 'none';
         }
 
-        // Crear el contenedor principal - ÉPICO ADMIN STYLE
+        // Crear el contenedor principal - ÉPICO ADMIN STYLE + RESPONSIVE
         this.container = document.createElement('div');
         this.container.id = 'admin-dashboard-container';
+        this.container.className = 'responsive-admin-dashboard';
+        
+        // Aplicar estilos responsivos usando ResponsiveUtils
+        const deviceType = ResponsiveUtils.getDeviceType();
+        const responsiveStyles = ResponsiveUtils.getResponsiveContainerStyles(deviceType);
+        
         this.container.style.cssText = `
             position: fixed;
             top: 0;
@@ -58,17 +70,19 @@ export default class AdminDashboardScene {
                 linear-gradient(45deg, rgba(0, 242, 255, 0.03) 0%, rgba(255, 0, 193, 0.03) 100%);
             color: var(--text-color);
             font-family: 'Inter', sans-serif;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
             z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            ${responsiveStyles}
         `;
 
-        // Canvas para partículas de fondo
+        // Canvas para partículas de fondo - RESPONSIVE
         this.particleCanvas = document.createElement('canvas');
         this.particleCanvas.id = 'admin-particles-canvas';
-        this.particleCanvas.width = window.innerWidth;
-        this.particleCanvas.height = window.innerHeight;
         this.particleCanvas.style.cssText = `
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
@@ -76,6 +90,9 @@ export default class AdminDashboardScene {
             z-index: 1;
             pointer-events: none;
         `;
+        
+        // Configurar canvas responsivo
+        ResponsiveUtils.setupResponsiveCanvas(this.particleCanvas);
 
         // Header épico del admin
         const header = this.createEpicHeader();
@@ -102,11 +119,16 @@ export default class AdminDashboardScene {
 
     createEpicHeader() {
         const header = document.createElement('div');
+        header.className = 'responsive-admin-header';
+        
+        const deviceType = ResponsiveUtils.getDeviceType();
+        const isMobile = deviceType === 'mobile';
+        
         header.style.cssText = `
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2rem 3rem;
+            ${isMobile ? 'flex-direction: column' : 'justify-content: space-between'};
+            ${isMobile ? 'gap: 1rem' : 'align-items: center'};
+            padding: ${isMobile ? 'clamp(1rem, 4vw, 2rem)' : 'clamp(1.5rem, 3vw, 3rem)'};
             background: rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(10px);
             border-bottom: 2px solid var(--primary-glow);
@@ -115,14 +137,16 @@ export default class AdminDashboardScene {
             position: relative;
             opacity: 0;
             transform: translateY(-20px);
+            flex-shrink: 0;
         `;
 
-        // Título épico
+        // Título épico - RESPONSIVE
         const title = document.createElement('h1');
-        title.textContent = 'CENTRO DE COMANDO ADMINISTRATIVO';
+        title.textContent = isMobile ? 'ADMIN CENTRAL' : 'CENTRO DE COMANDO ADMINISTRATIVO';
+        title.className = 'responsive-admin-title';
         title.style.cssText = `
             font-family: 'Orbitron', monospace;
-            font-size: 2rem;
+            font-size: clamp(1.2rem, 4vw, 2rem);
             font-weight: 900;
             color: #fff;
             text-shadow: 
@@ -130,22 +154,28 @@ export default class AdminDashboardScene {
                 0 0 20px var(--primary-glow),
                 0 0 30px rgba(0, 242, 255, 0.5);
             margin: 0;
-            letter-spacing: 2px;
+            letter-spacing: clamp(1px, 0.2vw, 2px);
             text-transform: uppercase;
+            text-align: ${isMobile ? 'center' : 'left'};
+            ${isMobile ? 'order: 1;' : ''}
         `;
 
-        // Info de usuario
+        // Info de usuario - RESPONSIVE
         const userInfo = document.createElement('div');
+        userInfo.className = 'responsive-user-info';
         userInfo.style.cssText = `
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: clamp(0.5rem, 2vw, 1rem);
+            ${isMobile ? 'justify-content: center; order: 2;' : ''}
+            flex-wrap: wrap;
         `;
 
         const userAvatar = document.createElement('div');
+        userAvatar.className = 'responsive-user-avatar';
         userAvatar.style.cssText = `
-            width: 50px;
-            height: 50px;
+            width: clamp(40px, 8vw, 50px);
+            height: clamp(40px, 8vw, 50px);
             border-radius: 50%;
             background: linear-gradient(45deg, var(--primary-glow), var(--secondary-glow));
             display: flex;
@@ -153,49 +183,57 @@ export default class AdminDashboardScene {
             justify-content: center;
             font-family: 'Orbitron', monospace;
             font-weight: bold;
-            font-size: 1.2rem;
+            font-size: clamp(1rem, 2vw, 1.2rem);
             color: #000;
             box-shadow: 0 0 20px rgba(0, 242, 255, 0.5);
+            flex-shrink: 0;
         `;
         userAvatar.textContent = 'A'; // Admin
 
         const userDetails = document.createElement('div');
+        userDetails.className = 'responsive-user-details';
+        
         const userName = document.createElement('div');
         userName.textContent = 'Administrador';
         userName.style.cssText = `
             font-family: 'Orbitron', monospace;
             font-weight: 600;
             color: var(--primary-glow);
+            font-size: clamp(0.9rem, 2vw, 1rem);
+            ${isMobile ? 'text-align: center;' : ''}
         `;
 
         const userRole = document.createElement('div');
         userRole.textContent = 'CONTROL TOTAL';
         userRole.style.cssText = `
-            font-size: 0.8rem;
+            font-size: clamp(0.7rem, 1.8vw, 0.8rem);
             color: var(--warning-glow);
             font-family: 'Orbitron', monospace;
             font-weight: 400;
+            ${isMobile ? 'text-align: center;' : ''}
         `;
 
         userDetails.appendChild(userName);
         userDetails.appendChild(userRole);
 
-        // Botón de logout épico
+        // Botón de logout épico - RESPONSIVE
         const logoutButton = document.createElement('button');
-        logoutButton.textContent = '← DESCONECTAR';
+        logoutButton.textContent = isMobile ? '← SALIR' : '← DESCONECTAR';
+        logoutButton.className = 'responsive-logout-btn';
         logoutButton.style.cssText = `
             background: transparent;
             border: 2px solid var(--danger-glow);
             color: var(--danger-glow);
-            padding: 12px 20px;
+            padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 20px);
             border-radius: 8px;
             font-family: 'Orbitron', monospace;
-            font-size: 0.9rem;
+            font-size: clamp(0.8rem, 1.8vw, 0.9rem);
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: clamp(0.5px, 0.2vw, 1px);
+            white-space: nowrap;
         `;
 
         logoutButton.addEventListener('mouseenter', () => {
@@ -237,35 +275,43 @@ export default class AdminDashboardScene {
     }
 
     createStatsContainer() {
-        // EXACTO como el ejemplo AdminDashboardScene
+        // EXACTO como el ejemplo AdminDashboard - RESPONSIVE
         const statsSection = document.createElement('div');
+        statsSection.className = 'responsive-stats-section';
+        
+        const deviceType = ResponsiveUtils.getDeviceType();
+        const isMobile = deviceType === 'mobile';
+        
         statsSection.style.cssText = `
-            padding: 2rem 3rem;
+            padding: clamp(1rem, 4vw, 2rem) clamp(1rem, 4vw, 3rem);
             z-index: 3;
             position: relative;
             opacity: 0;
             transform: translateY(20px);
+            flex-shrink: 0;
         `;
 
         const statsTitle = document.createElement('h2');
-        statsTitle.textContent = 'ESTADÍSTICAS DEL SISTEMA';
+        statsTitle.textContent = isMobile ? 'ESTADÍSTICAS' : 'ESTADÍSTICAS DEL SISTEMA';
+        statsTitle.className = 'responsive-stats-title';
         statsTitle.style.cssText = `
             font-family: 'Orbitron', monospace;
-            font-size: 1.5rem;
+            font-size: clamp(1.1rem, 3vw, 1.5rem);
             font-weight: 700;
             color: var(--warning-glow);
-            margin-bottom: 1.5rem;
+            margin-bottom: clamp(1rem, 3vw, 1.5rem);
             text-shadow: 0 0 10px var(--warning-glow);
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: clamp(0.5px, 0.2vw, 1px);
+            text-align: ${isMobile ? 'center' : 'left'};
         `;
 
         const statsContainer = document.createElement('div');
-        statsContainer.className = 'stats-container';
+        statsContainer.className = 'stats-container responsive-stats-grid';
         statsContainer.style.cssText = `
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(clamp(180px, 40vw, 220px), 1fr));
+            gap: clamp(1rem, 3vw, 1.5rem);
             width: 100%;
         `;
 
@@ -279,42 +325,49 @@ export default class AdminDashboardScene {
 
         statsData.forEach(stat => {
             const statCard = document.createElement('div');
-            statCard.className = 'stat-card';
+            statCard.className = 'stat-card responsive-stat-card';
             statCard.style.cssText = `
                 background: rgba(0, 0, 0, 0.3);
                 border: 1px solid ${stat.color};
-                border-radius: 12px;
-                padding: 1.5rem;
+                border-radius: clamp(8px, 2vw, 12px);
+                padding: clamp(1rem, 3vw, 1.5rem);
                 text-align: center;
                 transition: all 0.3s ease;
                 backdrop-filter: blur(5px);
                 box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
                 cursor: pointer;
+                min-height: clamp(100px, 20vw, 120px);
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                gap: clamp(0.3rem, 1vw, 0.5rem);
             `;
 
             const value = document.createElement('div');
-            value.className = 'value';
+            value.className = 'value responsive-stat-value';
             value.dataset.value = stat.value;
             value.textContent = '0';
             value.style.cssText = `
-                font-size: 2.5rem;
+                font-size: clamp(1.5rem, 5vw, 2.5rem);
                 font-family: 'Orbitron', monospace;
                 font-weight: 900;
                 color: ${stat.color};
-                margin-bottom: 0.5rem;
+                margin-bottom: clamp(0.2rem, 1vw, 0.5rem);
                 text-shadow: 0 0 10px ${stat.color};
+                line-height: 1;
             `;
 
             const label = document.createElement('div');
-            label.className = 'label';
+            label.className = 'label responsive-stat-label';
             label.textContent = stat.label;
             label.style.cssText = `
-                font-size: 0.9rem;
+                font-size: clamp(0.7rem, 2vw, 0.9rem);
                 color: var(--text-color);
                 font-family: 'Orbitron', monospace;
                 font-weight: 400;
                 text-transform: uppercase;
-                letter-spacing: 1px;
+                letter-spacing: clamp(0.3px, 0.1vw, 1px);
+                line-height: 1.2;
             `;
 
             statCard.appendChild(value);
@@ -355,22 +408,29 @@ export default class AdminDashboardScene {
 
     createMainPanel() {
         const mainPanel = document.createElement('div');
+        mainPanel.className = 'responsive-main-panel';
+        
+        const deviceType = ResponsiveUtils.getDeviceType();
+        const isMobile = deviceType === 'mobile';
+        
         mainPanel.style.cssText = `
             flex: 1;
-            padding: 0 3rem 2rem 3rem;
+            padding: 0 clamp(1rem, 4vw, 3rem) clamp(1rem, 4vw, 2rem) clamp(1rem, 4vw, 3rem);
             z-index: 3;
             position: relative;
             overflow-y: auto;
             opacity: 0;
             transform: translateY(30px);
+            min-height: 0; /* Para permitir que el flex funcione correctamente */
         `;
 
-        // Tabs para gestión
+        // Tabs para gestión - RESPONSIVE
         const tabsContainer = document.createElement('div');
+        tabsContainer.className = 'responsive-tabs-container';
         tabsContainer.style.cssText = `
             background: rgba(0, 0, 0, 0.3);
-            border-radius: 15px;
-            padding: 2rem;
+            border-radius: clamp(10px, 2vw, 15px);
+            padding: clamp(1rem, 4vw, 2rem);
             border: 1px solid var(--primary-glow);
             box-shadow: 
                 0 0 30px rgba(0, 242, 255, 0.2),
@@ -379,12 +439,15 @@ export default class AdminDashboardScene {
         `;
 
         const tabsNav = document.createElement('div');
+        tabsNav.className = 'responsive-tabs-nav';
         tabsNav.style.cssText = `
             display: flex;
-            gap: 1rem;
-            margin-bottom: 2rem;
+            ${isMobile ? 'flex-direction: column' : 'flex-direction: row'};
+            gap: clamp(0.5rem, 2vw, 1rem);
+            margin-bottom: clamp(1rem, 3vw, 2rem);
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 1rem;
+            padding-bottom: clamp(0.5rem, 2vw, 1rem);
+            ${isMobile ? 'align-items: stretch;' : ''}
         `;
 
         const tabs = ['characters', 'stages', 'music'];
@@ -394,19 +457,22 @@ export default class AdminDashboardScene {
             const tabButton = document.createElement('button');
             tabButton.textContent = tabLabels[index];
             tabButton.dataset.tab = tab;
-            tabButton.className = `admin-tab ${tab === this.currentTab ? 'active' : ''}`;
+            tabButton.className = `admin-tab responsive-tab-btn ${tab === this.currentTab ? 'active' : ''}`;
             tabButton.style.cssText = `
                 background: ${tab === this.currentTab ? 'var(--primary-glow)' : 'transparent'};
                 color: ${tab === this.currentTab ? '#000' : 'var(--text-color)'};
                 border: 2px solid var(--primary-glow);
-                padding: 12px 20px;
-                border-radius: 8px;
+                padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 20px);
+                border-radius: clamp(4px, 1vw, 8px);
                 font-family: 'Orbitron', monospace;
                 font-weight: 600;
                 cursor: pointer;
                 transition: all 0.3s ease;
                 text-transform: uppercase;
-                letter-spacing: 1px;
+                letter-spacing: clamp(0.3px, 0.1vw, 1px);
+                font-size: clamp(0.8rem, 2vw, 0.9rem);
+                ${isMobile ? 'flex: 1; text-align: center;' : ''}
+                white-space: nowrap;
             `;
 
             tabButton.addEventListener('click', () => {
@@ -416,20 +482,23 @@ export default class AdminDashboardScene {
             tabsNav.appendChild(tabButton);
         });
 
-        // Contenido de gestión
+        // Contenido de gestión - RESPONSIVE
         const managementContent = document.createElement('div');
         managementContent.id = 'management-content';
+        managementContent.className = 'responsive-management-content';
         managementContent.style.cssText = `
-            min-height: 300px;
+            min-height: clamp(200px, 30vh, 300px);
         `;
 
         const contentText = document.createElement('div');
+        contentText.className = 'responsive-content-text';
         contentText.style.cssText = `
             text-align: center;
             color: var(--text-color);
             font-family: 'Orbitron', monospace;
-            font-size: 1.2rem;
-            padding: 2rem;
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            padding: clamp(1rem, 4vw, 2rem);
+            line-height: 1.4;
         `;
         contentText.textContent = `Panel de gestión de ${tabLabels[tabs.indexOf(this.currentTab)]} - En desarrollo`;
 
@@ -611,9 +680,13 @@ export default class AdminDashboardScene {
             anime.remove(this.statsAnimation);
         }
 
+        // Cleanup ResponsiveUtils canvas handlers
+        if (this.particleCanvas) {
+            ResponsiveUtils.cleanup(this.particleCanvas);
+        }
+
         if (this.container) {
             this.container.remove();
         }
-
     }
 }

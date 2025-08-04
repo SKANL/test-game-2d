@@ -1,9 +1,11 @@
 /**
  * LoginScene - Pantalla de login épica con efectos holográficos
  * Implementación EXACTA basada en ejemplos funcionales de anime.js
+ * RESPONSIVE: Adaptado para todos los dispositivos con ResponsiveUtils
  */
 import MockApiClient from '../../infrastructure/MockApiClient.js';
 import AuthManager from '../../infrastructure/AuthManager.js';
+import ResponsiveUtils from '../../infrastructure/ResponsiveUtils.js';
 
 export default class LoginScene {
     constructor(onAuthSuccess) {
@@ -13,6 +15,9 @@ export default class LoginScene {
         this.container = null;
         this.particleCanvas = null;
         this.animationId = null;
+        
+        // Inicializar ResponsiveUtils
+        ResponsiveUtils.init();
     }
 
     render() {
@@ -22,9 +27,15 @@ export default class LoginScene {
             gameCanvas.style.display = 'none';
         }
 
-        // Crear el contenedor principal - EXACTO como el ejemplo
+        // Aplicar estilos responsivos usando ResponsiveUtils
+        const deviceType = ResponsiveUtils.getDeviceType();
+
+        // Crear el contenedor principal RESPONSIVO
         this.container = document.createElement('div');
         this.container.id = 'login-scene-container';
+        this.container.className = 'responsive-container login-container';
+        
+        // Aplicar estilos específicos responsivos para Login
         this.container.style.cssText = `
             position: fixed;
             top: 0;
@@ -41,14 +52,16 @@ export default class LoginScene {
             align-items: center;
             z-index: 1000;
             font-family: 'Inter', sans-serif;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
+            padding: ${deviceType === 'mobile' ? 'clamp(1rem, 5vw, 1.5rem)' : 'clamp(1rem, 4vw, 2rem)'};
+            gap: ${deviceType === 'mobile' ? '1rem' : '1.5rem'};
         `;
 
-        // Canvas para partículas de fondo
+        // Canvas para partículas de fondo RESPONSIVO
         this.particleCanvas = document.createElement('canvas');
         this.particleCanvas.id = 'login-particles';
-        this.particleCanvas.width = window.innerWidth;
-        this.particleCanvas.height = window.innerHeight;
+        this.particleCanvas.className = 'responsive-canvas';
         this.particleCanvas.style.cssText = `
             position: absolute;
             top: 0;
@@ -58,66 +71,78 @@ export default class LoginScene {
             z-index: 1;
             pointer-events: none;
         `;
+        
+        // Configurar canvas responsivo usando ResponsiveUtils
+        ResponsiveUtils.setupResponsiveCanvas(this.particleCanvas);
 
-        // Título del login
+        // Título del login RESPONSIVO
         const title = document.createElement('h1');
-        title.textContent = 'FIGHTER 2D LOGIN';
+        title.textContent = deviceType === 'mobile' ? 'FIGHTER 2D' : 'FIGHTER 2D LOGIN';
+        title.className = 'responsive-title login-title';
         title.style.cssText = `
             font-family: 'Orbitron', monospace;
-            font-size: 3rem;
+            font-size: ${deviceType === 'mobile' ? 'clamp(1.2rem, 5vw, 2rem)' : 'clamp(1.5rem, 6vw, 3rem)'};
             font-weight: 900;
             color: #fff;
-            margin-bottom: 3rem;
+            margin-bottom: ${deviceType === 'mobile' ? 'clamp(1rem, 4vw, 1.5rem)' : 'clamp(2rem, 5vw, 3rem)'};
             text-shadow: 0 0 10px var(--primary-glow), 0 0 20px var(--primary-glow);
             opacity: 0;
             transform: translateY(-30px);
             z-index: 3;
+            text-align: center;
+            max-width: 100%;
+            word-wrap: break-word;
         `;
 
-        // Formulario holográfico - EXACTO como el ejemplo
+        // Formulario holográfico RESPONSIVO
         const form = document.createElement('form');
-        form.className = 'holographic-form';
+        form.className = 'holographic-form responsive-form';
         form.style.cssText = `
-            width: 400px;
+            width: 100%;
+            max-width: ${deviceType === 'mobile' ? '95vw' : 'min(90vw, 400px)'};
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--primary-glow);
             border-radius: 15px;
-            padding: 2rem;
+            padding: ${deviceType === 'mobile' ? 'clamp(1rem, 4vw, 1.5rem)' : 'clamp(1.5rem, 4vw, 2rem)'};
             box-shadow: 
                 0 0 30px rgba(0, 242, 255, 0.3),
                 inset 0 0 30px rgba(0, 242, 255, 0.1);
             backdrop-filter: blur(10px);
             z-index: 3;
+            position: relative;
             opacity: 0;
             transform: scale(0.9) translateY(20px);
         `;
 
-        // Email input wrapper - EXACTO como el ejemplo
+        // Email input wrapper - RESPONSIVO
         const emailWrapper = document.createElement('div');
-        emailWrapper.className = 'input-wrapper';
+        emailWrapper.className = 'input-wrapper responsive-input-wrapper';
         emailWrapper.style.cssText = `
             position: relative;
-            margin-bottom: 1.5rem;
+            margin-bottom: ${deviceType === 'mobile' ? '1.2rem' : '1.5rem'};
         `;
 
         const emailInput = document.createElement('input');
         emailInput.type = 'email';
         emailInput.id = 'email-input';
+        emailInput.className = 'responsive-input';
         emailInput.placeholder = 'usuario@dominio.com';
         emailInput.required = true;
         emailInput.style.cssText = `
             width: 100%;
-            padding: 15px;
+            padding: ${deviceType === 'mobile' ? '12px' : '15px'};
             background: rgba(0, 242, 255, 0.1);
             border: 1px solid var(--primary-glow);
             border-radius: 8px;
             color: #fff;
-            font-size: 1.1rem;
+            font-size: ${deviceType === 'mobile' ? '1rem' : '1.1rem'};
             box-shadow: 0 0 10px rgba(0, 242, 255, 0.5) inset;
             transition: all 0.3s ease;
             opacity: 0;
             transform: translateY(15px);
             box-sizing: border-box;
+            min-height: ${deviceType === 'mobile' ? '44px' : 'auto'};
+            touch-action: manipulation;
         `;
 
         const emailBurst = document.createElement('div');
@@ -125,7 +150,7 @@ export default class LoginScene {
         emailBurst.style.cssText = `
             position: absolute;
             right: -10px;
-            top: 15px;
+            top: ${deviceType === 'mobile' ? '12px' : '15px'};
             width: 20px;
             height: 20px;
         `;
@@ -133,32 +158,35 @@ export default class LoginScene {
         emailWrapper.appendChild(emailInput);
         emailWrapper.appendChild(emailBurst);
 
-        // Password input wrapper
+        // Password input wrapper - RESPONSIVO
         const passwordWrapper = document.createElement('div');
-        passwordWrapper.className = 'input-wrapper';
+        passwordWrapper.className = 'input-wrapper responsive-input-wrapper';
         passwordWrapper.style.cssText = `
             position: relative;
-            margin-bottom: 2rem;
+            margin-bottom: ${deviceType === 'mobile' ? '1.5rem' : '2rem'};
         `;
 
         const passwordInput = document.createElement('input');
         passwordInput.type = 'password';
         passwordInput.id = 'password-input';
+        passwordInput.className = 'responsive-input';
         passwordInput.placeholder = 'contraseña';
         passwordInput.required = true;
         passwordInput.style.cssText = `
             width: 100%;
-            padding: 15px;
+            padding: ${deviceType === 'mobile' ? '12px' : '15px'};
             background: rgba(0, 242, 255, 0.1);
             border: 1px solid var(--primary-glow);
             border-radius: 8px;
             color: #fff;
-            font-size: 1.1rem;
+            font-size: ${deviceType === 'mobile' ? '1rem' : '1.1rem'};
             box-shadow: 0 0 10px rgba(0, 242, 255, 0.5) inset;
             transition: all 0.3s ease;
             opacity: 0;
             transform: translateY(15px);
             box-sizing: border-box;
+            min-height: ${deviceType === 'mobile' ? '44px' : 'auto'};
+            touch-action: manipulation;
         `;
 
         const passwordBurst = document.createElement('div');
@@ -166,7 +194,7 @@ export default class LoginScene {
         passwordBurst.style.cssText = `
             position: absolute;
             right: -10px;
-            top: 15px;
+            top: ${deviceType === 'mobile' ? '12px' : '15px'};
             width: 20px;
             height: 20px;
         `;
@@ -174,19 +202,20 @@ export default class LoginScene {
         passwordWrapper.appendChild(passwordInput);
         passwordWrapper.appendChild(passwordBurst);
 
-        // Botón de login
+        // Botón de login RESPONSIVO
         const loginButton = document.createElement('button');
         loginButton.type = 'submit';
         loginButton.textContent = 'INICIAR SESIÓN';
+        loginButton.className = 'login-button responsive-button';
         loginButton.style.cssText = `
             width: 100%;
-            padding: 15px;
+            padding: ${deviceType === 'mobile' ? '12px' : '15px'};
             background: linear-gradient(45deg, var(--primary-glow), var(--secondary-glow));
             border: none;
             border-radius: 8px;
             color: #000;
             font-family: 'Orbitron', monospace;
-            font-size: 1.1rem;
+            font-size: ${deviceType === 'mobile' ? '1rem' : '1.1rem'};
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -195,29 +224,34 @@ export default class LoginScene {
             box-shadow: 0 0 20px rgba(0, 242, 255, 0.5);
             opacity: 0;
             transform: translateY(15px);
+            min-height: ${deviceType === 'mobile' ? '44px' : 'auto'};
+            touch-action: manipulation;
         `;
 
-        // Botón de registro
+        // Botón de registro RESPONSIVO
         const registerButton = document.createElement('button');
         registerButton.type = 'button';
         registerButton.textContent = 'CREAR CUENTA';
+        registerButton.className = 'register-button responsive-button';
         registerButton.style.cssText = `
             width: 100%;
-            padding: 15px;
+            padding: ${deviceType === 'mobile' ? '12px' : '15px'};
             background: transparent;
             border: 2px solid var(--secondary-glow);
             border-radius: 8px;
             color: var(--secondary-glow);
             font-family: 'Orbitron', monospace;
-            font-size: 1rem;
+            font-size: ${deviceType === 'mobile' ? '0.9rem' : '1rem'};
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-top: 1rem;
+            margin-top: ${deviceType === 'mobile' ? '0.8rem' : '1rem'};
             opacity: 0;
             transform: translateY(15px);
+            min-height: ${deviceType === 'mobile' ? '44px' : 'auto'};
+            touch-action: manipulation;
         `;
 
         // Ensamblar formulario
@@ -550,6 +584,11 @@ export default class LoginScene {
     cleanup() {
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
+        }
+
+        // Cleanup ResponsiveUtils canvas handlers
+        if (this.particleCanvas) {
+            ResponsiveUtils.cleanup(this.particleCanvas);
         }
 
         if (this.container) {

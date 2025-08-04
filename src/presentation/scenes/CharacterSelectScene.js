@@ -3,6 +3,7 @@
  * Basado en los ejemplos funcionales de anime.js
  */
 import VisualEffectsManager from '../VisualEffectsManager.js';
+import ResponsiveUtils from '../../infrastructure/ResponsiveUtils.js';
 
 export default class CharacterSelectScene {
     constructor(onCharactersSelected, gameMode) {
@@ -23,7 +24,7 @@ export default class CharacterSelectScene {
         }
 
         const container = document.createElement('div');
-        container.className = 'scene-transition';
+        container.className = 'scene-transition responsive-container';
         container.style.cssText = `
             position: fixed;
             top: 0;
@@ -34,42 +35,61 @@ export default class CharacterSelectScene {
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             z-index: 1000;
             font-family: 'Orbitron', sans-serif;
             perspective: 1000px;
+            padding: var(--spacing-lg);
+            overflow-x: hidden;
+            overflow-y: auto;
         `;
 
         // Inicializar efectos visuales
         this.vfx.init();
 
-        // Título principal con efectos
+        // Título principal con efectos RESPONSIVO
         const title = document.createElement('h1');
         title.className = 'glitch-text';
         title.textContent = 'CHARACTER SELECT';
         title.style.cssText = `
             color: var(--primary-glow);
-            margin: 30px 0;
-            font-size: 3rem;
-            font-family: 'Orbitron', sans-serif;
+            font-size: var(--font-size-3xl);
             font-weight: 900;
-            text-shadow: 0 0 20px var(--primary-glow);
+            margin-bottom: var(--spacing-lg);
             text-align: center;
-            letter-spacing: 3px;
+            text-shadow: 0 0 20px var(--primary-glow);
+            letter-spacing: clamp(2px, 1vw, 4px);
             opacity: 0;
             transform: translateY(-50px);
         `;
         container.appendChild(title);
 
-        // Contenedor principal para las selecciones
+        // Contenedor principal para las selecciones RESPONSIVO
         const mainContainer = document.createElement('div');
         mainContainer.style.cssText = `
-            display: flex;
-            justify-content: space-around;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            grid-template-areas: "player1 vs player2";
             width: 100%;
-            max-width: 1200px;
-            margin-top: 20px;
-            gap: 40px;
+            max-width: var(--container-xl);
+            margin-top: var(--spacing-lg);
+            gap: var(--spacing-md);
+            align-items: center;
+            justify-items: center;
         `;
+        
+        // Media query para móvil
+        if (ResponsiveUtils.getDeviceType() === 'mobile') {
+            mainContainer.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                width: 100%;
+                max-width: var(--container-sm);
+                margin-top: var(--spacing-md);
+                gap: var(--spacing-sm);
+                align-items: center;
+            `;
+        }
 
         // Selección Jugador 1
         const p1Section = this.createPlayerSection(
@@ -115,13 +135,15 @@ export default class CharacterSelectScene {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 30px;
+            padding: var(--spacing-lg);
             background: rgba(255, 255, 255, 0.05);
             border: 2px solid var(${colorVar});
-            border-radius: 15px;
-            margin: 10px;
+            border-radius: var(--border-radius-lg);
+            margin: var(--spacing-sm);
             backdrop-filter: blur(10px);
-            min-width: 300px;
+            min-width: clamp(250px, 40vw, 300px);
+            max-width: var(--container-sm);
+            width: 100%;
             transform-style: preserve-3d;
             transition: all 0.5s ease;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
@@ -131,23 +153,24 @@ export default class CharacterSelectScene {
         titleEl.textContent = title;
         titleEl.style.cssText = `
             color: var(${colorVar});
-            margin-bottom: 30px;
-            font-size: 1.8rem;
+            margin-bottom: var(--spacing-lg);
+            font-size: var(--font-size-xl);
             font-family: 'Orbitron', sans-serif;
             font-weight: 700;
             text-shadow: 0 0 10px var(${colorVar});
             text-align: center;
-            letter-spacing: 2px;
+            letter-spacing: clamp(1px, 0.5vw, 2px);
         `;
         section.appendChild(titleEl);
 
-        // Contenedor de personajes con efecto 3D
+        // Contenedor de personajes con efecto 3D RESPONSIVO
         const characterGrid = document.createElement('div');
         characterGrid.style.cssText = `
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(clamp(100px, 20vw, 120px), 1fr));
+            gap: var(--spacing-md);
             perspective: 1000px;
+            width: 100%;
         `;
 
         this.characters.forEach((character, index) => {
@@ -157,20 +180,20 @@ export default class CharacterSelectScene {
 
         section.appendChild(characterGrid);
 
-        // Preview del personaje seleccionado
+        // Preview del personaje seleccionado RESPONSIVO
         const preview = document.createElement('div');
         preview.id = `preview-${playerId}`;
         preview.style.cssText = `
-            margin-top: 20px;
-            padding: 20px;
+            margin-top: var(--spacing-md);
+            padding: var(--spacing-md);
             border: 2px dashed transparent;
-            border-radius: 10px;
-            min-height: 100px;
+            border-radius: var(--border-radius-md);
+            min-height: clamp(80px, 15vw, 100px);
             display: flex;
             align-items: center;
             justify-content: center;
             color: var(--text-color);
-            font-size: 1.2rem;
+            font-size: var(--font-size-md);
             font-weight: 600;
             text-align: center;
             opacity: 0.7;
