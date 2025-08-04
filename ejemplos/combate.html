@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Efectos 3D Épicos para Juego de Peleas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            perspective: 1200px;
+            overflow-x: hidden; /* Evita scrollbars por el screen shake */
+        }
+        .container-box {
+            background-color: rgba(0,0,0,0.2);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .power-up-container, .impact-zone, .ko-container, .round-container, .parry-container, .dash-container {
+            transform-style: preserve-3d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
+            width: 100%;
+        }
+        .power-particle, .ko-particle, .parry-particle {
+            position: absolute;
+            border-radius: 50%;
+            background: currentColor;
+            pointer-events: none;
+        }
+        .shockwave {
+            position: absolute;
+            border-radius: 50%;
+            border: 4px solid #facc15; /* yellow-400 */
+            pointer-events: none;
+        }
+        .flash-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .ground-crack {
+            stroke: #fef08a; /* yellow-200 */
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+        }
+        .ko-letter {
+            display: inline-block;
+            font-weight: 900;
+            font-size: 4rem;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transform: scale(0);
+            opacity: 0;
+        }
+        .round-text-wrapper {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+        }
+        .round-text {
+            font-weight: 900;
+            font-size: 3rem;
+            color: white;
+            text-shadow: 0 0 10px #facc15, 0 0 20px #f59e0b;
+        }
+        .parry-shield {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border: 4px solid #38bdf8;
+            border-radius: 50%;
+            box-shadow: 0 0 20px #0ea5e9;
+            opacity: 0;
+        }
+        .dash-avatar {
+            width: 80px;
+            height: 80px;
+            background-color: #a78bfa;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            border: 4px solid #8b5cf6;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="text-center mb-12">
+        <h1 class="text-4xl md:text-5xl font-black mb-2 tracking-tighter">EFECTOS DE COMBATE ÉPICOS</h1>
+        <p class="text-gray-400 text-lg">Versión Dios de la Guerra</p>
+    </div>
+
+    <div class="flex flex-wrap justify-center items-stretch gap-8 w-full max-w-screen-xl">
+
+        <div class="flex flex-col text-center w-56 container-box">
+            <h2 class="text-xl font-bold mb-4">1. Impacto Definitivo</h2>
+            <div id="impact-zone" class="relative w-full h-48 bg-gray-800 rounded-lg cursor-pointer border-2 border-dashed border-gray-600 overflow-hidden">
+                <span class="text-gray-500 m-auto">Haz clic aquí</span>
+                <div class="flash-overlay"></div>
+            </div>
+        </div>
+
+        <div class="flex flex-col text-center w-56 container-box">
+            <h2 class="text-xl font-bold mb-4">2. Liberación de Poder</h2>
+            <div id="power-up-container" class="power-up-container w-full h-48">
+                 <div class="absolute w-full h-full" id="ground-crack-container"></div>
+                 <div id="character-avatar" class="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center border-4 border-red-400 z-10 transition-all duration-300">
+                     <span class="font-bold text-3xl">!</span>
+                 </div>
+            </div>
+            <button id="power-up-button" class="mt-4 bg-yellow-500 text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-yellow-400 transition-colors shadow-lg shadow-yellow-500/30">¡LIBERAR PODER!</button>
+        </div>
+        
+        <div class="flex flex-col text-center w-56 container-box">
+            <h2 class="text-xl font-bold mb-4">3. Efecto K.O.</h2>
+            <div id="ko-container" class="ko-container w-full h-48 relative text-red-500">
+                 <span class="ko-letter">K</span><span class="ko-letter">.</span><span class="ko-letter">O</span><span class="ko-letter">.</span>
+            </div>
+            <button id="ko-button" class="mt-4 bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-500 transition-colors shadow-lg shadow-red-500/30">KNOCKOUT!</button>
+        </div>
+
+        <div class="flex flex-col text-center w-56 container-box">
+            <h2 class="text-xl font-bold mb-4">4. Inicio de Round</h2>
+            <div id="round-container" class="round-container w-full h-48 bg-gray-800 rounded-lg overflow-hidden">
+            </div>
+            <button id="round-button" class="mt-4 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/30">¡A LUCHAR!</button>
+        </div>
+
+        <div class="flex flex-col text-center w-56 container-box">
+            <h2 class="text-xl font-bold mb-4">5. Bloqueo / Parry</h2>
+            <div id="parry-container" class="parry-container w-full h-48 bg-gray-800 rounded-lg cursor-pointer overflow-hidden">
+                 <div class="parry-shield"></div>
+            </div>
+            <button id="parry-button" class="mt-4 bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-500/30">¡BLOQUEAR!</button>
+        </div>
+        
+        <div class="flex flex-col text-center w-56 container-box">
+            <h2 class="text-xl font-bold mb-4">6. Dash / Esquive</h2>
+            <div id="dash-container" class="dash-container w-full h-48 bg-gray-800 rounded-lg cursor-pointer overflow-hidden">
+                 <div id="dash-avatar" class="dash-avatar">➤</div>
+            </div>
+            <button id="dash-button" class="mt-4 bg-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-purple-500 transition-colors shadow-lg shadow-purple-500/30">¡ESQUIVAR!</button>
+        </div>
+
+    </div>
+
+    <script>
+        function screenShake(intensity = 8) {
+            anime({ targets: 'body', translateX: [{ value: anime.random(-intensity, intensity), duration: 50 }, { value: 0, duration: 50 }], translateY: [{ value: anime.random(-intensity, intensity), duration: 50 }, { value: 0, duration: 50 }], duration: 150, easing: 'easeInOutSine' });
+        }
+
+        const impactZone = document.getElementById('impact-zone');
+        impactZone.addEventListener('click', (e) => {
+            screenShake(15);
+            const rect = impactZone.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+            const flash = impactZone.querySelector('.flash-overlay');
+            anime({ targets: flash, opacity: [0.8, 0], duration: 100, easing: 'easeInQuad' });
+            anime({ targets: impactZone, filter: ['hue-rotate(0deg)', 'hue-rotate(360deg)'], scale: [1, 1.1, 1], duration: 400, easing: 'easeInOutSine' });
+            const shockwave = document.createElement('div');
+            shockwave.classList.add('shockwave');
+            shockwave.style.left = `${clickX}px`;
+            shockwave.style.top = `${clickY}px`;
+            shockwave.style.transform = 'translate(-50%, -50%)';
+            impactZone.appendChild(shockwave);
+            anime({ targets: shockwave, width: ['0px', '300px'], height: ['0px', '300px'], opacity: [0.8, 0], borderWidth: ['10px', '0px'], duration: 500, easing: 'easeOutExpo', complete: () => shockwave.remove() });
+            for (let i = 0; i < 50; i++) {
+                const debris = document.createElement('div');
+                debris.style.cssText = `position: absolute; width: ${anime.random(3, 10)}px; height: ${anime.random(0, 1) > 0.8 ? 20 : anime.random(3, 10)}px; background: hsl(${anime.random(30, 60)}, 100%, 50%);`;
+                debris.style.left = `${clickX}px`;
+                debris.style.top = `${clickY}px`;
+                impactZone.appendChild(debris);
+                anime({ targets: debris, translateX: anime.random(-150, 150), translateY: anime.random(-150, 150), translateZ: anime.random(50, 250), opacity: [1, 0], scale: [1, 0], duration: anime.random(800, 1400), easing: 'easeOutExpo', complete: () => debris.remove() });
+            }
+        });
+
+        const powerUpButton = document.getElementById('power-up-button');
+        const powerUpContainer = document.getElementById('power-up-container');
+        const characterAvatar = document.getElementById('character-avatar');
+        const crackContainer = document.getElementById('ground-crack-container');
+        powerUpButton.addEventListener('click', () => {
+            anime.timeline({ easing: 'easeOutExpo' })
+                .add({ targets: characterAvatar, translateY: -20, scale: 1.2, boxShadow: '0 0 0 0 rgba(239, 68, 68, 0.7)', duration: 400 })
+                .add({ targets: characterAvatar, translateY: 0, scale: 1, boxShadow: '0 0 35px 20px rgba(239, 68, 68, 0)', duration: 600 }, '-=200');
+            crackContainer.innerHTML = '';
+            for(let i = 0; i < 6; i++) {
+                const crackSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                crackSvg.setAttribute('class', 'absolute w-full h-full top-0 left-0 overflow-visible');
+                const crackPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                crackPath.setAttribute('class', 'ground-crack');
+                crackPath.setAttribute('d', `M100 100 l ${anime.random(50, 70)} 0 l ${anime.random(-15, 15)} ${anime.random(25, 35)}`);
+                crackSvg.style.transform = `translate(-50%, -50%) rotate(${i * 60 + anime.random(-20, 20)}deg)`;
+                crackSvg.style.top = '50%'; crackSvg.style.left = '50%';
+                crackSvg.appendChild(crackPath);
+                crackContainer.appendChild(crackSvg);
+                const length = crackPath.getTotalLength();
+                crackPath.style.strokeDasharray = length;
+                crackPath.style.strokeDashoffset = length;
+                anime({ targets: crackPath, strokeDashoffset: [length, 0], duration: anime.random(700, 900), delay: 200, easing: 'easeInOutSine', direction: 'alternate', complete: () => crackSvg.remove() });
+            }
+            for (let i = 0; i < 80; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('power-particle');
+                particle.style.background = anime.random(0, 1) > 0.5 ? '#facc15' : '#fb923c';
+                powerUpContainer.appendChild(particle);
+                anime({ targets: particle, translateX: () => anime.random(-90, 90), translateY: [anime.random(20, 40), anime.random(-160, -110)], translateZ: () => anime.random(-60, 60), rotate: '1turn', scale: [anime.random(1, 4), 0], opacity: [1, 0], duration: anime.random(1200, 2000), easing: 'easeOutExpo', delay: anime.random(0, 600), complete: () => particle.remove() });
+            }
+        });
+
+        const koButton = document.getElementById('ko-button');
+        const koContainer = document.getElementById('ko-container');
+        koButton.addEventListener('click', () => {
+            screenShake(20);
+            const timeline = anime.timeline();
+            timeline.add({ targets: '.ko-letter', scale: [3, 1], opacity: [0, 1], translateZ: 0, easing: "easeOutExpo", duration: 800, delay: anime.stagger(100) })
+                    .add({ targets: koContainer, scale: 1.2, duration: 100, easing: 'easeInOutSine' })
+                    .add({ targets: koContainer, scale: 1, duration: 800, easing: 'easeOutElastic(1, .5)'})
+                    .add({ targets: '.ko-letter', scale: 1.1, duration: 200, easing: 'easeInOutSine', direction: 'alternate' }, '-=900');
+            for (let i = 0; i < 70; i++) {
+                const p = document.createElement('div');
+                p.classList.add('ko-particle');
+                p.style.background = `hsl(${anime.random(0, 60)}, 100%, 50%)`;
+                koContainer.appendChild(p);
+                anime({ targets: p, translateX: anime.random(-180, 180), translateY: anime.random(-120, 120), translateZ: anime.random(-120, 120), scale: [anime.random(1, 5), 0], opacity: [1, 0], duration: anime.random(900, 1800), easing: 'easeOutExpo', complete: () => p.remove() });
+            }
+        });
+
+        const roundButton = document.getElementById('round-button');
+        const roundContainer = document.getElementById('round-container');
+        roundButton.addEventListener('click', () => {
+            roundContainer.innerHTML = '';
+            const round1Wrapper = document.createElement('div');
+            round1Wrapper.classList.add('round-text-wrapper');
+            const round1Text = document.createElement('span');
+            round1Text.classList.add('round-text');
+            round1Text.textContent = 'Round 1';
+            round1Wrapper.appendChild(round1Text);
+            roundContainer.appendChild(round1Wrapper);
+
+            const fightWrapper = document.createElement('div');
+            fightWrapper.classList.add('round-text-wrapper');
+            const fightText = document.createElement('span');
+            fightText.classList.add('round-text');
+            fightText.style.color = '#ef4444';
+            fightText.style.textShadow = '0 0 10px #ef4444, 0 0 20px #b91c1c';
+            fightText.textContent = 'FIGHT!';
+            fightWrapper.appendChild(fightText);
+            roundContainer.appendChild(fightWrapper);
+
+            anime.set([round1Wrapper, fightWrapper], { opacity: 0, scale: 0.5, translateY: -40 });
+            anime.set(round1Text, { filter: 'blur(5px)'});
+
+            const tl = anime.timeline({ easing: 'easeOutExpo', complete: () => { roundContainer.innerHTML = ''; } });
+            tl.add({ targets: round1Wrapper, opacity: 1, scale: 1, translateY: 0, duration: 800 })
+              .add({ targets: round1Text, filter: 'blur(0px)', duration: 600 }, '-=800')
+              .add({ targets: round1Wrapper, opacity: 0, translateX: '-100%', scale: 0.8, duration: 600, easing: 'easeInExpo' }, '+=800')
+              .add({ targets: fightWrapper, opacity: 1, scale: [2, 1], translateY: 0, duration: 600, begin: () => screenShake(10) }, '-=400')
+              .add({ targets: fightWrapper, opacity: 0, scale: 0, duration: 800, easing: 'easeInExpo' }, '+=1000');
+        });
+
+        const parryButton = document.getElementById('parry-button');
+        const parryContainer = document.getElementById('parry-container');
+        parryButton.addEventListener('click', () => {
+            const shield = parryContainer.querySelector('.parry-shield');
+            anime.timeline({ easing: 'easeOutExpo' })
+                .add({ targets: shield, opacity: [0, 1], scale: [0.5, 1], duration: 150 })
+                .add({ targets: shield, rotate: '15deg', scale: 0.9, duration: 100, direction: 'alternate' })
+                .add({ targets: shield, opacity: 0, scale: 0.5, duration: 300, easing: 'easeInExpo' }, '+=200');
+            for(let i=0; i<20; i++) {
+                const spark = document.createElement('div');
+                spark.classList.add('parry-particle');
+                spark.style.background = '#fde047';
+                parryContainer.appendChild(spark);
+                anime({
+                    targets: spark,
+                    translateX: anime.random(-80, 80),
+                    translateY: anime.random(-80, 80),
+                    scale: [anime.random(1, 2.5), 0],
+                    opacity: [1, 0],
+                    duration: anime.random(300, 600),
+                    easing: 'easeOutExpo',
+                    delay: 100,
+                    complete: () => spark.remove()
+                });
+            }
+        });
+
+        const dashButton = document.getElementById('dash-button');
+        const dashAvatar = document.getElementById('dash-avatar');
+        dashButton.addEventListener('click', () => {
+            anime({
+                targets: dashAvatar,
+                translateX: [
+                    { value: -100, duration: 200, easing: 'easeInExpo' },
+                    { value: 100, duration: 200, easing: 'easeOutInExpo' },
+                    { value: 0, duration: 200, easing: 'easeOutExpo' }
+                ],
+                begin: () => {
+                    for(let i=0; i<5; i++) {
+                        const afterImage = dashAvatar.cloneNode(true);
+                        afterImage.style.position = 'absolute';
+                        afterImage.style.opacity = 0.5;
+                        dashAvatar.parentNode.appendChild(afterImage);
+                        anime({
+                            targets: afterImage,
+                            opacity: 0,
+                            translateX: -100,
+                            duration: 400,
+                            delay: i * 40,
+                            easing: 'linear',
+                            complete: () => afterImage.remove()
+                        });
+                    }
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
