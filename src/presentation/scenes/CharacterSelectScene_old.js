@@ -110,7 +110,7 @@ export default class CharacterSelectScene {
 
     createPlayerSection(title, playerId, colorVar) {
         const section = document.createElement('div');
-        section.className = playerId === 'p1' ? 'slide-in-left' : 'slide-in-right';
+        section.className = 'slide-in-left';
         section.style.cssText = `
             display: flex;
             flex-direction: column;
@@ -126,6 +126,10 @@ export default class CharacterSelectScene {
             transition: all 0.5s ease;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         `;
+
+        if (playerId === 'p2') {
+            section.className = 'slide-in-right';
+        }
 
         const titleEl = document.createElement('h2');
         titleEl.textContent = title;
@@ -219,13 +223,6 @@ export default class CharacterSelectScene {
         nameEl.innerHTML = nameEl.textContent.replace(/\S/g, "<span style='display: inline-block; transition: all 0.3s ease;'>$&</span>");
         card.appendChild(nameEl);
 
-        // Setup interactions
-        this.setupCardInteractions(card, playerId, character);
-
-        return card;
-    }
-
-    setupCardInteractions(card, playerId, character) {
         // Hover effects
         card.addEventListener('mouseenter', () => {
             anime({
@@ -275,6 +272,8 @@ export default class CharacterSelectScene {
         card.addEventListener('click', (e) => {
             this.selectCharacter(playerId, character, card, e);
         });
+
+        return card;
     }
 
     createVSIndicator() {
@@ -485,6 +484,58 @@ export default class CharacterSelectScene {
         const container = document.querySelector('.scene-transition');
         if (container && container.parentNode) {
             container.parentNode.removeChild(container);
+        }
+    }
+}
+            const charButton = document.createElement('button');
+            charButton.textContent = character;
+            charButton.style.cssText = `
+                padding: 15px 30px;
+                background-color: #007bff;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 16px;
+                cursor: pointer;
+                transition: all 0.3s;
+                min-width: 150px;
+            `;
+            
+            charButton.onmouseover = () => {
+                charButton.style.backgroundColor = '#0056b3';
+                charButton.style.transform = 'scale(1.05)';
+            };
+            charButton.onmouseout = () => {
+                charButton.style.backgroundColor = '#007bff';
+                charButton.style.transform = 'scale(1)';
+            };
+            
+            charButton.onclick = () => onSelect(character);
+            characterList.appendChild(charButton);
+        });
+
+        section.appendChild(characterList);
+        return section;
+    }
+
+    selectCharacter(player, character) {
+        this.selectedCharacters[player] = character;
+        
+        // Si ambos jugadores han seleccionado
+        if (this.selectedCharacters.p1 && this.selectedCharacters.p2) {
+            // Pasar la selección completa y el modo de juego
+            this.onCharactersSelected({
+                p1: this.selectedCharacters.p1,
+                p2: this.selectedCharacters.p2,
+                gameMode: this.gameMode
+            });
+        }
+    }
+
+    cleanup() {
+        const gameCanvas = document.getElementById('gameCanvas');
+        if (gameCanvas) {
+            gameCanvas.style.display = 'block';
         }
     }
 }

@@ -15,6 +15,7 @@ import HUD from '../HUD.js';
 import AudioManager from '../../infrastructure/AudioManager.js';
 import Character from '../../domain/Character.js';
 import JuiceManager from '../../infrastructure/JuiceManager.js';
+import VisualEffectsManager from '../VisualEffectsManager.js';
 
 export default class BattleScene {
     constructor(battleConfig, gameManager = null) {
@@ -222,6 +223,10 @@ export default class BattleScene {
         
         // HUD (necesita el renderer)
         this.hud = new HUD(this.renderer);
+        
+        // Visual Effects Manager - Efectos épicos con anime.js
+        this.vfx = new VisualEffectsManager();
+        this.vfx.init();
         
         // Audio Manager (sin await, inicialización asíncrona opcional)
         this.audioManager = new AudioManager();
@@ -642,16 +647,37 @@ export default class BattleScene {
     }
 
     /**
-     * Crear efecto visual de hit (SOLID - SRP)
+     * Crear efecto visual de hit ÉPICO (SOLID - SRP)
      */
-    createVisualHitEffect(x, y) {
+    createVisualHitEffect(x, y, damage = 10) {
         this.visualEffects.hitEffects.push({
             x: x,
             y: y,
             life: 0.3
         });
         
-        // Trigger screen shake y partículas
+        // Efectos épicos con VisualEffectsManager
+        const intensity = Math.min(damage / 5, 15); // Escalar intensidad basada en daño
+        
+        // Screen shake épico
+        this.vfx.screenShake(intensity);
+        
+        // Partículas épicas de impacto
+        this.vfx.createParticleBurst(x, y, damage * 2, [
+            '#ff4444', '#ffaa44', '#ffffff', '#ffd700'
+        ]);
+        
+        // Efecto de shockwave para golpes fuertes
+        if (damage > 15) {
+            this.vfx.createShockwave(x, y, damage * 5);
+        }
+        
+        // Flash effect para golpes críticos
+        if (damage > 20) {
+            this.vfx.flashEffect(0.4, 200);
+        }
+        
+        // Mantener compatibilidad con JuiceManager existente
         JuiceManager.triggerScreenShake(5, 100);
         JuiceManager.createParticles({
             x: x, y: y,
@@ -678,6 +704,67 @@ export default class BattleScene {
     onMatchReset() {
         this.onRoundReset();
         console.log('🆕 BattleScene: Match reiniciado');
+    }
+
+    /**
+     * Eventos épicos de batalla con efectos visuales
+     */
+    onRoundStart(roundNumber = 1) {
+        if (this.vfx) {
+            // Efecto épico de inicio de ronda
+            this.vfx.createShockwave(400, 300, 300);
+            this.vfx.flashEffect(0.5, 300);
+        }
+        
+        if (this.hud && this.hud.triggerRoundStart) {
+            this.hud.triggerRoundStart(roundNumber);
+        }
+        
+        console.log(`⚔️ ¡ROUND ${roundNumber} START!`);
+    }
+
+    onPlayerKO(playerIndex, winnerIndex) {
+        if (this.vfx) {
+            // Efecto épico de KO
+            const koPlayer = this.characters[playerIndex];
+            if (koPlayer) {
+                this.vfx.createKOEffect(koPlayer.position.x, koPlayer.position.y);
+                this.vfx.screenShake(20);
+                this.vfx.flashEffect(0.8, 500);
+            }
+        }
+        
+        if (this.hud && this.hud.triggerKO) {
+            this.hud.triggerKO(`p${playerIndex + 1}`);
+        }
+        
+        console.log(`💀 Player ${playerIndex + 1} KO! Winner: Player ${winnerIndex + 1}`);
+    }
+
+    onSuperMeterFull(playerIndex) {
+        if (this.vfx) {
+            const player = this.characters[playerIndex];
+            if (player) {
+                this.vfx.createPowerUpEffect(player.position.x, player.position.y);
+                this.vfx.flashEffect(0.3, 200);
+            }
+        }
+        
+        console.log(`⚡ Player ${playerIndex + 1} SUPER READY!`);
+    }
+
+    onSpecialMove(playerIndex, moveName) {
+        if (this.vfx) {
+            const player = this.characters[playerIndex];
+            if (player) {
+                this.vfx.createShockwave(player.position.x, player.position.y, 200);
+                this.vfx.createParticleBurst(player.position.x, player.position.y, 50, [
+                    '#00f2ff', '#ff00c1', '#ffff00'
+                ]);
+            }
+        }
+        
+        console.log(`🔥 Player ${playerIndex + 1} usa ${moveName}!`);
     }
 
     /**
@@ -719,6 +806,16 @@ export default class BattleScene {
         // Limpiar audio
         if (this.audioManager && typeof this.audioManager.cleanup === 'function') {
             this.audioManager.cleanup();
+        }
+        
+        // Limpiar efectos visuales épicos
+        if (this.vfx && typeof this.vfx.cleanup === 'function') {
+            this.vfx.cleanup();
+        }
+        
+        // Limpiar HUD
+        if (this.hud && typeof this.hud.destroy === 'function') {
+            this.hud.destroy();
         }
         
         // Desregistrar del GameManager

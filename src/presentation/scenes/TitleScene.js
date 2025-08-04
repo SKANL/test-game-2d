@@ -1,257 +1,376 @@
 /**
- * TitleScene - Pantalla de título principal del juego
- * Sección 9 del Documento Maestro
+ * TitleScene - Pantalla de título épica con efectos visuales avanzados
+ * Implementación EXACTA basada en ejemplos funcionales de anime.js
  */
 export default class TitleScene {
     constructor(onStart, onOptions) {
         this.onStart = onStart;
         this.onOptions = onOptions;
+        this.container = null;
+        this.titleText = null;
+        this.isInitialized = false;
+        this.backgroundParticles = [];
         this.animationId = null;
-        this.titleOffset = 0;
+    }
+
+    async init() {
+        if (this.isInitialized) return;
+        this.isInitialized = true;
+        console.log('🎬 TitleScene inicializada');
     }
 
     render() {
-        const container = document.createElement('div');
-        container.style.cssText = `
+        if (!this.isInitialized) {
+            this.init();
+        }
+
+        // Ocultar canvas del juego si existe
+        const gameCanvas = document.getElementById('gameCanvas');
+        if (gameCanvas) {
+            gameCanvas.style.display = 'none';
+        }
+
+        // Crear el contenedor principal
+        this.container = document.createElement('div');
+        this.container.id = 'title-scene-container';
+        this.container.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(45deg, #000428 0%, #004e92 100%);
+            background: var(--dark-bg);
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(0, 242, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 0, 193, 0.15) 0%, transparent 50%);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            z-index: 1000;
+            font-family: 'Orbitron', monospace;
             overflow: hidden;
-            font-family: Arial, sans-serif;
         `;
 
-        // Título principal con animación
-        const titleContainer = document.createElement('div');
-        titleContainer.style.cssText = `
-            text-align: center;
-            margin-bottom: 50px;
-            animation: titlePulse 2s ease-in-out infinite alternate;
-        `;
-
-        const title = document.createElement('h1');
-        title.textContent = 'FIGHTER 2D';
-        title.style.cssText = `
-            font-size: 4rem;
-            color: #ffaa00;
-            text-shadow: 
-                0 0 10px #ffaa00,
-                0 0 20px #ffaa00,
-                0 0 30px #ffaa00,
-                0 0 40px #ff8800;
-            margin: 0;
-            font-weight: bold;
-            letter-spacing: 5px;
-        `;
-
-        const subtitle = document.createElement('h2');
-        subtitle.textContent = 'Presiona cualquier tecla para comenzar';
-        subtitle.style.cssText = `
-            font-size: 1.5rem;
-            color: #ffffff;
-            margin: 20px 0;
-            opacity: 0.8;
-            animation: blink 1.5s ease-in-out infinite;
-        `;
-
-        titleContainer.appendChild(title);
-        titleContainer.appendChild(subtitle);
-
-        // Menu de opciones
-        const menuContainer = document.createElement('div');
-        menuContainer.style.cssText = `
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            margin-top: 50px;
-        `;
-
-        const startButton = this.createMenuButton('INICIAR JUEGO', () => {
-            this.cleanup();
-            if (this.onStart) this.onStart();
-        });
-
-        const optionsButton = this.createMenuButton('OPCIONES', () => {
-            this.cleanup();
-            if (this.onOptions) this.onOptions();
-        });
-
-        const exitButton = this.createMenuButton('SALIR', () => {
-            if (confirm('¿Seguro que quieres salir?')) {
-                window.close();
-            }
-        });
-
-        menuContainer.appendChild(startButton);
-        menuContainer.appendChild(optionsButton);
-        menuContainer.appendChild(exitButton);
-
-        // Partículas de fondo
-        const particlesContainer = this.createParticles();
-
-        container.appendChild(particlesContainer);
-        container.appendChild(titleContainer);
-        container.appendChild(menuContainer);
-
-        // Añadir estilos CSS para animaciones
-        this.addAnimationStyles();
-
-        // Event listener para cualquier tecla
-        this.keyListener = (event) => {
-            this.cleanup();
-            if (this.onStart) this.onStart();
-        };
-        document.addEventListener('keydown', this.keyListener);
-
-        document.body.appendChild(container);
-    }
-
-    createMenuButton(text, onClick) {
-        const button = document.createElement('button');
-        button.textContent = text;
-        button.style.cssText = `
-            padding: 15px 40px;
-            font-size: 1.2rem;
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        `;
-
-        button.onmouseenter = () => {
-            button.style.transform = 'translateY(-5px) scale(1.05)';
-            button.style.boxShadow = '0 8px 25px rgba(0,0,0,0.4)';
-            button.style.background = 'linear-gradient(45deg, #ff8e8e, #ff7b42)';
-        };
-
-        button.onmouseleave = () => {
-            button.style.transform = 'translateY(0) scale(1)';
-            button.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
-            button.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)';
-        };
-
-        button.onclick = onClick;
-
-        return button;
-    }
-
-    createParticles() {
-        const particlesContainer = document.createElement('div');
-        particlesContainer.style.cssText = `
+        // Canvas para partículas de fondo (como en el ejemplo)
+        const particleCanvas = document.createElement('canvas');
+        particleCanvas.id = 'title-particles';
+        particleCanvas.width = window.innerWidth;
+        particleCanvas.height = window.innerHeight;
+        particleCanvas.style.cssText = `
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            z-index: 1;
             pointer-events: none;
-            overflow: hidden;
         `;
 
-        // Crear múltiples partículas
-        for (let i = 0; i < 30; i++) {
-            const particle = document.createElement('div');
-            particle.style.cssText = `
-                position: absolute;
-                width: ${Math.random() * 4 + 2}px;
-                height: ${Math.random() * 4 + 2}px;
-                background: ${this.getRandomColor()};
-                border-radius: 50%;
-                animation: float ${Math.random() * 10 + 5}s linear infinite;
-                left: ${Math.random() * 100}%;
-                animation-delay: ${Math.random() * 5}s;
-                opacity: 0.7;
+        // Título principal - EXACTO como en el ejemplo
+        this.titleText = document.createElement('h1');
+        this.titleText.className = 'title-text';
+        this.titleText.textContent = 'FIGHTER 2D';
+        this.titleText.style.cssText = `
+            font-family: 'Orbitron', sans-serif;
+            font-size: 4rem;
+            font-weight: 900;
+            color: #fff;
+            position: relative;
+            z-index: 3;
+            cursor: pointer;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 10px var(--primary-glow), 0 0 20px var(--primary-glow);
+        `;
+
+        // Convertir texto a letras individuales - EXACTO como en el ejemplo
+        this.titleText.innerHTML = this.titleText.textContent.replace(/\S/g, "<span class='letter'>$&</span>");
+        
+        // Aplicar estilos a las letras
+        const letters = this.titleText.querySelectorAll('.letter');
+        letters.forEach(letter => {
+            letter.style.cssText = `
+                display: inline-block;
+                line-height: 1em;
+                text-shadow: 0 0 10px var(--primary-glow), 0 0 20px var(--primary-glow);
             `;
-            particlesContainer.appendChild(particle);
+        });
+
+        // Menú de navegación
+        const menu = document.createElement('div');
+        menu.className = 'title-menu';
+        menu.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            z-index: 3;
+            opacity: 0;
+        `;
+
+        // Botones del menú
+        const menuItems = [
+            { text: 'JUGAR', action: () => this.onStartGame() },
+            { text: 'OPCIONES', action: () => this.onOptionsGame() },
+            { text: 'SALIR', action: () => this.onExit() }
+        ];
+
+        menuItems.forEach((item, index) => {
+            const button = document.createElement('button');
+            button.textContent = item.text;
+            button.style.cssText = `
+                background: transparent;
+                border: 2px solid var(--primary-glow);
+                color: var(--primary-glow);
+                padding: 1rem 2rem;
+                border-radius: 8px;
+                font-family: 'Orbitron', monospace;
+                font-size: 1.1rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
+                opacity: 0;
+                transform: translateY(20px);
+            `;
+
+            button.addEventListener('mouseenter', () => {
+                if (typeof anime !== 'undefined') {
+                    anime({
+                        targets: button,
+                        scale: 1.05,
+                        boxShadow: '0 0 20px rgba(0, 242, 255, 0.6)',
+                        duration: 200,
+                        easing: 'easeOutQuad'
+                    });
+                }
+            });
+
+            button.addEventListener('mouseleave', () => {
+                if (typeof anime !== 'undefined') {
+                    anime({
+                        targets: button,
+                        scale: 1,
+                        boxShadow: '0 0 10px rgba(0, 242, 255, 0.3)',
+                        duration: 200,
+                        easing: 'easeOutQuad'
+                    });
+                }
+            });
+
+            button.addEventListener('click', item.action);
+            menu.appendChild(button);
+        });
+
+        // Ensamblar la escena
+        this.container.appendChild(particleCanvas);
+        this.container.appendChild(this.titleText);
+        this.container.appendChild(menu);
+        document.body.appendChild(this.container);
+
+        // Iniciar animaciones - EXACTO como en el ejemplo
+        this.startTitleAnimation();
+        this.startMenuAnimation();
+        this.startParticleBackground(particleCanvas);
+
+        return this.container;
+    }
+
+    startTitleAnimation() {
+        // Verificar que anime esté disponible
+        if (typeof anime === 'undefined') {
+            console.warn('⚠️ anime.js no está disponible, usando fallback');
+            this.fallbackTitleAnimation();
+            return;
         }
 
-        return particlesContainer;
+        console.log('🎭 Iniciando animación del título con anime.js');
+
+        // Implementación EXACTA del ejemplo funcional
+        anime.timeline({loop: true})
+            .add({ 
+                targets: '.title-text .letter', 
+                translateY: [100, 0], 
+                translateZ: 0, 
+                opacity: [0, 1], 
+                easing: "easeOutExpo", 
+                duration: 1400, 
+                delay: anime.stagger(50, {start: 300}) 
+            })
+            .add({ 
+                targets: '.title-text .letter', 
+                translateY: [0, -100], 
+                opacity: [1, 0], 
+                easing: "easeInExpo", 
+                duration: 1200, 
+                delay: anime.stagger(50, {start: 100}) 
+            });
+
+        // Evento de click - EXACTO como en el ejemplo
+        this.titleText.addEventListener('click', () => {
+            anime({
+                targets: '.title-text .letter',
+                translateX: () => anime.random(-5, 5),
+                translateY: () => anime.random(-5, 5),
+                scale: () => anime.random(0.8, 1.2),
+                textShadow: [
+                    '0 0 10px var(--primary-glow)', 
+                    '0 0 40px var(--secondary-glow)', 
+                    '0 0 10px var(--primary-glow)'
+                ],
+                duration: 800,
+                direction: 'alternate',
+                easing: 'easeInOutSine',
+                delay: anime.stagger(30)
+            });
+        });
     }
 
-    getRandomColor() {
-        const colors = ['#ffaa00', '#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#6c5ce7'];
-        return colors[Math.floor(Math.random() * colors.length)];
+    startMenuAnimation() {
+        if (typeof anime === 'undefined') return;
+
+        const menuButtons = document.querySelectorAll('.title-menu button');
+        
+        // Mostrar menú después del título
+        setTimeout(() => {
+            anime({
+                targets: '.title-menu',
+                opacity: [0, 1],
+                duration: 800,
+                easing: 'easeOutExpo'
+            });
+
+            anime({
+                targets: menuButtons,
+                opacity: [0, 1],
+                translateY: [20, 0],
+                delay: anime.stagger(100, {start: 200}),
+                duration: 600,
+                easing: 'easeOutExpo'
+            });
+        }, 2000);
     }
 
-    addAnimationStyles() {
-        if (document.getElementById('titleSceneStyles')) return;
+    startParticleBackground(canvas) {
+        const ctx = canvas.getContext('2d');
+        const particles = [];
+        
+        // Crear partículas como en el ejemplo
+        for (let i = 0; i < 100; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 3 + 1,
+                speedX: (Math.random() - 0.5) * 2,
+                speedY: (Math.random() - 0.5) * 2,
+                opacity: Math.random() * 0.5 + 0.2,
+                color: Math.random() > 0.5 ? 'rgba(0, 242, 255, ' : 'rgba(255, 0, 193, '
+            });
+        }
 
-        const style = document.createElement('style');
-        style.id = 'titleSceneStyles';
-        style.textContent = `
-            @keyframes titlePulse {
-                0% { 
-                    transform: scale(1);
-                    text-shadow: 
-                        0 0 10px #ffaa00,
-                        0 0 20px #ffaa00,
-                        0 0 30px #ffaa00,
-                        0 0 40px #ff8800;
-                }
-                100% { 
-                    transform: scale(1.05);
-                    text-shadow: 
-                        0 0 15px #ffaa00,
-                        0 0 25px #ffaa00,
-                        0 0 35px #ffaa00,
-                        0 0 45px #ff8800,
-                        0 0 55px #ff6600;
-                }
+        const animateParticles = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            particles.forEach(particle => {
+                particle.x += particle.speedX;
+                particle.y += particle.speedY;
+                
+                // Rebote en bordes
+                if (particle.x < 0 || particle.x > canvas.width) particle.speedX *= -1;
+                if (particle.y < 0 || particle.y > canvas.height) particle.speedY *= -1;
+                
+                // Dibujar partícula
+                ctx.globalAlpha = particle.opacity;
+                ctx.fillStyle = particle.color + particle.opacity + ')';
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Conectar partículas cercanas
+                particles.forEach(otherParticle => {
+                    const distance = Math.hypot(particle.x - otherParticle.x, particle.y - otherParticle.y);
+                    if (distance < 100) {
+                        const opacity = 1 - (distance / 100);
+                        ctx.globalAlpha = opacity * 0.3;
+                        ctx.strokeStyle = particle.color + opacity + ')';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(particle.x, particle.y);
+                        ctx.lineTo(otherParticle.x, otherParticle.y);
+                        ctx.stroke();
+                    }
+                });
+            });
+            
+            if (document.getElementById('title-scene-container')) {
+                this.animationId = requestAnimationFrame(animateParticles);
             }
+        };
+        
+        animateParticles();
+    }
 
-            @keyframes blink {
-                0%, 50% { opacity: 0.8; }
-                100% { opacity: 0.3; }
-            }
+    fallbackTitleAnimation() {
+        // Fallback sin anime.js
+        const letters = document.querySelectorAll('.title-text .letter');
+        letters.forEach((letter, index) => {
+            setTimeout(() => {
+                letter.style.opacity = '1';
+                letter.style.transform = 'translateY(0)';
+                letter.style.transition = 'all 0.5s ease';
+            }, index * 100);
+        });
+    }
 
-            @keyframes float {
-                0% {
-                    transform: translateY(100vh) rotate(0deg);
-                    opacity: 0;
-                }
-                10% {
-                    opacity: 0.7;
-                }
-                90% {
-                    opacity: 0.7;
-                }
-                100% {
-                    transform: translateY(-100px) rotate(360deg);
-                    opacity: 0;
-                }
-            }
-        `;
-        document.head.appendChild(style);
+    // Métodos de navegación
+    onStartGame() {
+        console.log('🎮 Iniciando juego...');
+        if (this.onStart) {
+            this.onStart();
+        }
+    }
+
+    onOptionsGame() {
+        console.log('⚙️ Abriendo opciones...');
+        if (this.onOptions) {
+            this.onOptions();
+        }
+    }
+
+    onExit() {
+        console.log('👋 Saliendo...');
+        // Lógica de salida
     }
 
     cleanup() {
-        // Remover event listener
-        if (this.keyListener) {
-            document.removeEventListener('keydown', this.keyListener);
-            this.keyListener = null;
-        }
-
-        // Detener animaciones
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
-            this.animationId = null;
         }
 
-        // Remover estilos
-        const styles = document.getElementById('titleSceneStyles');
-        if (styles) {
-            styles.remove();
+        if (this.container) {
+            // Animación de salida épica
+            if (typeof anime !== 'undefined') {
+                anime({
+                    targets: this.container,
+                    opacity: [1, 0],
+                    scale: [1, 0.9],
+                    duration: 500,
+                    easing: 'easeInExpo',
+                    complete: () => {
+                        if (this.container) {
+                            this.container.remove();
+                        }
+                    }
+                });
+            } else {
+                this.container.remove();
+            }
         }
+
+        // Limpiar referencias
+        this.container = null;
+        this.titleText = null;
+        this.backgroundParticles = [];
     }
 }

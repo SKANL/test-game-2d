@@ -12,6 +12,9 @@ async function initializeGame() {
     try {
         console.log('🚀 Iniciando aplicación...');
         
+        // Esperar a que anime.js esté disponible
+        await waitForAnime();
+        
         // Verificar que los elementos DOM estén disponibles
         const gameCanvas = document.getElementById('gameCanvas');
         if (!gameCanvas) {
@@ -77,6 +80,37 @@ window.addEventListener('unhandledrejection', (event) => {
     // Prevenir que aparezca en la consola del navegador
     event.preventDefault();
 });
+
+/**
+ * Esperar a que anime.js esté disponible
+ */
+function waitForAnime() {
+    return new Promise((resolve) => {
+        if (typeof anime !== 'undefined') {
+            console.log('✅ anime.js ya está disponible');
+            resolve();
+            return;
+        }
+
+        console.log('⏳ Esperando a que anime.js se cargue...');
+        
+        // Verificar cada 50ms si anime está disponible
+        const checkAnime = setInterval(() => {
+            if (typeof anime !== 'undefined') {
+                console.log('✅ anime.js cargado correctamente');
+                clearInterval(checkAnime);
+                resolve();
+            }
+        }, 50);
+
+        // Timeout después de 5 segundos
+        setTimeout(() => {
+            clearInterval(checkAnime);
+            console.warn('⚠️ anime.js no se cargó en 5 segundos, continuando sin él');
+            resolve();
+        }, 5000);
+    });
+}
 
 /**
  * Manejar errores JavaScript no capturados
