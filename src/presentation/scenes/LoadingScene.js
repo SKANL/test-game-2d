@@ -49,11 +49,10 @@ export default class LoadingScene {
         container.id = 'loading-scene-container';
         container.className = 'responsive-container';
         container.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
+            position: relative;
             width: 100%;
             height: 100%;
+            min-height: 100vh;
             background: var(--dark-bg);
             background-image: 
                 radial-gradient(circle at 20% 80%, rgba(0, 242, 255, 0.15) 0%, transparent 50%),
@@ -207,7 +206,14 @@ export default class LoadingScene {
         container.appendChild(particleCanvas);
         container.appendChild(logo);
         container.appendChild(loadingContainer);
-        document.body.appendChild(container);
+        
+        // Agregar la escena al contenedor de escenas manejado por SceneManager
+        const sceneContainer = document.getElementById('scene-container');
+        if (sceneContainer) {
+            sceneContainer.appendChild(container);
+        } else {
+            document.body.appendChild(container);
+        }
 
         // Añadir estilos CSS para animaciones
         this.addLoadingStyles();

@@ -19,24 +19,38 @@ import VisualEffectsManager from '../VisualEffectsManager.js';
 import ResponsiveUtils from '../../infrastructure/ResponsiveUtils.js';
 
 export default class BattleScene {
+    // Indica al SceneManager que no debe pre-cargar esta escena sin configuración
+    static skipPreload = true;
+
     constructor(battleConfig, gameManager = null) {
         // Inyección de dependencia del GameManager (SOLID - DIP)
         this.gameManager = gameManager;
         
         // Configuración de batalla (SOLID - SRP)
-        this.battleConfig = this.validateBattleConfig(battleConfig);
-        this.p1Character = this.battleConfig.p1;
-        this.p2Character = this.battleConfig.p2;
-        this.gameMode = this.battleConfig.gameMode;
-        
-        // Validar datos de personajes desde mock DB
-        this.characterData = this.loadCharacterData();
+        // Solo validar si se proporciona configuración para evitar errores durante registro
+        if (battleConfig) {
+            this.battleConfig = this.validateBattleConfig(battleConfig);
+            this.p1Character = this.battleConfig.p1;
+            this.p2Character = this.battleConfig.p2;
+            this.gameMode = this.battleConfig.gameMode;
+            
+            // Validar datos de personajes desde mock DB solo con configuración válida
+            this.characterData = this.loadCharacterData();
+        } else {
+            // Configuración por defecto para registro inicial
+            this.battleConfig = null;
+            this.p1Character = null;
+            this.p2Character = null;
+            this.gameMode = 'versus';
+            this.characterData = null;
+        }
         
         // Sistemas de presentación (SOLID - SRP)
         this.renderer = null;
         this.inputManager = null;
         this.hud = null;
         this.audioManager = null;
+        this.juiceManager = null; // Para efectos de feedback visual
         
         // Referencias a objetos de dominio (ÚNICA FUENTE DE VERDAD)
         this.characters = [];
@@ -85,6 +99,12 @@ export default class BattleScene {
      * Cargar datos de personajes desde base de datos mock (SOLID - SRP)
      */
     loadCharacterData() {
+        // Verificar que tenemos configuración válida
+        if (!this.p1Character || !this.p2Character) {
+            console.warn('⚠️ BattleScene: No hay personajes seleccionados para cargar');
+            return null;
+        }
+        
         const p1Data = mockDb.characters.find(c => c.name === this.p1Character);
         const p2Data = mockDb.characters.find(c => c.name === this.p2Character);
         
@@ -106,7 +126,7 @@ export default class BattleScene {
             await this.loadAssets();
             
             // Inicializar sistemas de presentación
-            this.initializePresentationSystems();
+            await this.initializePresentationSystems();
             
             // Crear objetos de dominio
             this.createDomainObjects();
@@ -129,6 +149,11 @@ export default class BattleScene {
      */
     async loadAssets() {
         console.log('📦 Cargando assets...');
+        
+        // Si no hay datos de personajes, no cargar assets (modo registro)
+        if (!this.characterData || !this.characterData.p1 || !this.characterData.p2) {
+            throw new Error('BattleScene: No se encontraron datos de personajes para cargar assets');
+        }
         
         try {
             // Cargar configuraciones de personajes dinámicamente
@@ -212,15 +237,21 @@ export default class BattleScene {
     /**
      * Inicializar sistemas de presentación (SOLID - SRP)
      */
-    initializePresentationSystems() {
+    async initializePresentationSystems() {
         console.log('🔧 Inicializando sistemas de presentación...');
         
         // Renderer con ID del canvas
         this.renderer = new CanvasRenderer('gameCanvas');
         
-        // Input Manager
-        this.inputManager = new InputManager();
-        this.inputManager.init();
+        // Input Manager - Usar el existente del GameManager si está disponible
+        if (this.gameManager && this.gameManager.inputManager) {
+            this.inputManager = this.gameManager.inputManager;
+        } else {
+            // Crear uno nuevo solo si no existe
+            this.inputManager = new InputManager();
+            // Usar el método legacy por ahora para evitar problemas async
+            this.inputManager.init();
+        }
         
         // HUD (necesita el renderer)
         this.hud = new HUD(this.renderer);
@@ -235,6 +266,10 @@ export default class BattleScene {
             console.warn('⚠️ AudioManager falló, continuando sin sonido:', err)
         );
         
+        // Juice Manager - Efectos de feedback visual
+        this.juiceManager = new JuiceManager();
+        await this.juiceManager.initialize();
+        
         console.log('✅ Sistemas de presentación inicializados');
     }
 
@@ -243,6 +278,11 @@ export default class BattleScene {
      */
     createDomainObjects() {
         console.log('👥 Creando objetos de dominio...');
+        
+        // NUEVO: Limpiar personajes existentes antes de crear nuevos
+        if (this.gameManager && this.gameManager.clearCharactersFromGameState) {
+            this.gameManager.clearCharactersFromGameState();
+        }
         
         // Obtener configuraciones
         const p1Config = this.assets.sprites.get('p1').config;
@@ -422,7 +462,9 @@ export default class BattleScene {
         this.updateVisualEffects(deltaTime);
         
         // Actualizar JuiceManager
-        JuiceManager.update();
+        if (this.juiceManager) {
+            this.juiceManager.update();
+        }
     }
 
     /**
@@ -469,7 +511,7 @@ export default class BattleScene {
         this.renderer.clearCanvas();
         
         // Aplicar screen shake si existe
-        const shakeOffset = JuiceManager.getScreenShakeOffset();
+        const shakeOffset = this.juiceManager ? this.juiceManager.getScreenShakeOffset() : { x: 0, y: 0 };
         if (shakeOffset.x !== 0 || shakeOffset.y !== 0) {
             this.renderer.setScreenShakeOffset(shakeOffset);
         }
@@ -591,7 +633,9 @@ export default class BattleScene {
         });
         
         // Renderizar partículas
-        JuiceManager.drawParticles(ctx);
+        if (this.juiceManager) {
+            this.juiceManager.drawParticles(ctx);
+        }
     }
 
     /**
@@ -681,14 +725,16 @@ export default class BattleScene {
         }
         
         // Mantener compatibilidad con JuiceManager existente
-        JuiceManager.triggerScreenShake(5, 100);
-        JuiceManager.createParticles({
-            x: x, y: y,
-            count: 8,
-            color: 'orange',
-            life: 20,
-            speed: 100
-        });
+        if (this.juiceManager) {
+            this.juiceManager.triggerScreenShake(5, 100);
+            this.juiceManager.createParticles({
+                x: x, y: y,
+                count: 8,
+                color: 'orange',
+                life: 20,
+                speed: 100
+            });
+        }
     }
 
     /**
@@ -795,7 +841,7 @@ export default class BattleScene {
     /**
      * Limpieza completa (SOLID - SRP)
      */
-    cleanup() {
+    async cleanup() {
         console.log('🧹 Limpiando BattleScene v2.0...');
         
         // Detener gameloop
@@ -824,6 +870,12 @@ export default class BattleScene {
         // Desregistrar del GameManager
         if (this.gameManager && typeof this.gameManager.unregisterBattleScene === 'function') {
             this.gameManager.unregisterBattleScene();
+        }
+        
+        // Limpiar sistemas específicos
+        if (this.juiceManager) {
+            await this.juiceManager.cleanup();
+            this.juiceManager = null;
         }
         
         // Limpiar arrays y maps

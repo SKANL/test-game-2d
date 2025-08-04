@@ -1,35 +1,178 @@
 /**
  * SceneManager - Gestiona las transiciones y ciclo de vida de las escenas
- * OPTIMIZADO: Mejor manejo de memoria y transiciones más robustas
+ * REFACTORIZADO: Aplica principios SOLID y hereda de BaseManager
+ * SRP: Responsabilidad única de gestionar escenas
+ * OCP: Extensible para nuevos tipos de escenas
+ * DIP: Depende de interfaces IScene
  */
-export default class SceneManager {
-    constructor() {
-        this.currentScene = null;
+import BaseManager from '../domain/base/BaseManager.js';
+
+export default class SceneManager extends BaseManager {
+    constructor(config = {}) {
+        super('SceneManager', {
+            autoStart: false,
+            transitionDuration: 300,
+            enablePreloading: true,
+            enableCaching: false,
+            maxHistorySize: 5,
+            ...config
+        });
+        
+        // Estado específico del SceneManager
         this.scenes = new Map();
+        this.sceneInstances = new Map();
+        this.currentScene = null;
         this.isTransitioning = false;
         this.transitionData = null;
-        
-        // Historial de escenas para navegación
         this.sceneHistory = [];
-        this.maxHistorySize = 5;
     }
 
     /**
-     * Registrar una escena en el manager
+     * Inicialización específica del SceneManager
+     */
+    async initializeSpecific() {
+        this.log('info', 'Inicializando SceneManager con configuración SOLID');
+        
+        // Configurar contenedor de escenas
+        this.setupSceneContainer();
+        
+        // Configurar eventos globales
+        this.setupGlobalEvents();
+    }
+
+    /**
+     * Configura el contenedor principal de escenas
+     */
+    setupSceneContainer() {
+        console.log('🔄 SceneManager: Configurando scene-container...');
+        
+        // Crear contenedor si no existe
+        let sceneContainer = document.getElementById('scene-container');
+        if (!sceneContainer) {
+            console.warn('🔄 scene-container no encontrado, creando...');
+            sceneContainer = document.createElement('div');
+            sceneContainer.id = 'scene-container';
+            document.body.appendChild(sceneContainer);
+            console.log('🔄 scene-container creado y añadido al DOM');
+        } else {
+            console.log('🔄 scene-container ya existe en el DOM');
+        }
+        
+        // Forzar estilos críticos SIEMPRE
+        sceneContainer.style.cssText = `
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 1000 !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            background: transparent !important;
+            display: block !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
+        `;
+        
+        this.sceneContainer = sceneContainer;
+        
+        console.log('🔄 scene-container configurado con estilos forzados:', {
+            id: sceneContainer.id,
+            display: sceneContainer.style.display,
+            visibility: sceneContainer.style.visibility,
+            zIndex: sceneContainer.style.zIndex,
+            bounds: sceneContainer.getBoundingClientRect()
+        });
+        
+        // Verificar que esté realmente en el DOM
+        if (!document.body.contains(sceneContainer)) {
+            console.error('❌ scene-container no está en el DOM después de la configuración');
+            document.body.appendChild(sceneContainer);
+            console.log('🔄 scene-container re-añadido al DOM');
+        }
+    }
+
+    /**
+     * Configura eventos globales del manager
+     */
+    setupGlobalEvents() {
+        // Listener para teclas globales
+        this.globalKeyHandler = (event) => {
+            if (this.currentScene && typeof this.currentScene.handleInput === 'function') {
+                this.currentScene.handleInput(event);
+            }
+        };
+        
+        window.addEventListener('keydown', this.globalKeyHandler);
+        
+        // Listener para redimensionamiento
+        this.resizeHandler = () => {
+            if (this.currentScene && typeof this.currentScene.handleResize === 'function') {
+                this.currentScene.handleResize();
+            }
+        };
+        
+        window.addEventListener('resize', this.resizeHandler);
+    }
+
+    /**
+     * Registrar una escena en el manager (SOLID - OCP)
      */
     registerScene(name, sceneClass) {
         if (!name || !sceneClass) {
-            throw new Error('Nombre de escena y clase requeridos');
+            throw new Error('Nombre de escena y clase requeridos para registro');
         }
+        
+        // Validar que la clase implemente la interfaz IScene
+        if (typeof sceneClass.prototype?.init !== 'function' || 
+            typeof sceneClass.prototype?.render !== 'function') {
+            this.log('warn', `Escena ${name} no implementa completamente la interfaz IScene`);
+        }
+        
         this.scenes.set(name, sceneClass);
+        this.log('info', `Escena ${name} registrada correctamente`);
+        
+        // Precargar si está habilitado y la escena no indica skipPreload
+        if (this.config.enablePreloading && !sceneClass.skipPreload) {
+            this.preloadScene(name, sceneClass);
+        }
     }
 
     /**
-     * Transición robusta a nueva escena
+     * Precarga una escena (SOLID - SRP)
+     */
+    async preloadScene(name, sceneClass) {
+        // No pre-cargar escenas que requieran configuración externa
+        if (sceneClass.skipPreload) {
+            return;
+        }
+        if (this.sceneInstances.has(name)) {
+            return; // Ya precargada
+        }
+        
+        try {
+            const sceneInstance = new sceneClass();
+            if (typeof sceneInstance.init === 'function') {
+                await sceneInstance.init();
+                this.sceneInstances.set(name, sceneInstance);
+                this.log('debug', `Escena ${name} precargada`);
+            }
+        } catch (error) {
+            this.log('error', `Error al precargar escena ${name}:`, error);
+        }
+    }
+
+    /**
+     * Transición robusta a nueva escena (SOLID - SRP)
      */
     async transitionTo(sceneName, data = null) {
         if (this.isTransitioning) {
-            console.warn('⚠️ Transición ya en progreso, ignorando nueva transición');
+            this.log('warn', 'Transición ya en progreso, ignorando nueva transición');
+            return false;
+        }
+
+        if (!this.scenes.has(sceneName)) {
+            this.handleError('Transición fallida', new Error(`Escena ${sceneName} no está registrada`));
             return false;
         }
 
@@ -37,9 +180,12 @@ export default class SceneManager {
         this.transitionData = data;
 
         try {
-            console.log(`🔄 Iniciando transición a: ${sceneName}`);
+            this.log('info', `Iniciando transición a: ${sceneName}`);
+            this.emit('transitionStart', { from: this.currentScene?.constructor.name, to: sceneName });
             
-            // 1. Limpiar escena actual
+            console.log(`🔄 SceneManager: Iniciando transición a ${sceneName}`);
+            
+            // 1. Limpiar escena actual con manejo de errores
             await this.cleanupCurrentScene();
             
             // 2. Preparar el DOM
@@ -51,242 +197,328 @@ export default class SceneManager {
             // 4. Actualizar historial
             this.updateSceneHistory(sceneName);
             
-            console.log(`✅ Transición completada a: ${sceneName}`);
+            // 5. Finalizar transición
+            this.finalizeTransition(sceneName);
+            
             return true;
             
         } catch (error) {
-            console.error('❌ Error durante la transición de escena:', error);
-            await this.handleTransitionError(error, sceneName);
-            return false;
-        } finally {
+            this.handleError('Error en transición de escena', error);
             this.isTransitioning = false;
+            return false;
         }
     }
 
     /**
-     * Limpiar escena actual de forma robusta
+     * Limpiar escena actual de forma robusta (SOLID - SRP)
      */
     async cleanupCurrentScene() {
         if (!this.currentScene) return;
 
         try {
+            this.log('debug', 'Limpiando escena actual...');
+            
             // Llamar método cleanup si existe
             if (typeof this.currentScene.cleanup === 'function') {
                 await this.currentScene.cleanup();
             }
             
-            // Detener cualquier animación o timer
-            if (this.currentScene.animationId) {
-                cancelAnimationFrame(this.currentScene.animationId);
-                this.currentScene.animationId = null;
-            }
+            // Limpiar referencias
+            this.currentScene = null;
             
-            // Limpiar intervalos si existen
-            if (this.currentScene.intervals) {
-                this.currentScene.intervals.forEach(id => clearInterval(id));
-                this.currentScene.intervals = [];
-            }
-            
-            // Limpiar timeouts si existen
-            if (this.currentScene.timeouts) {
-                this.currentScene.timeouts.forEach(id => clearTimeout(id));
-                this.currentScene.timeouts = [];
-            }
-            
-            // Limpiar event listeners si existen
-            if (typeof this.currentScene.removeEventListeners === 'function') {
-                this.currentScene.removeEventListeners();
-            }
-            
-            console.log('🧹 Escena anterior limpiada correctamente');
         } catch (error) {
-            console.error('❌ Error limpiando escena anterior:', error);
+            this.handleError('Error al limpiar escena actual', error);
         }
     }
 
     /**
-     * Preparar DOM para nueva escena
+     * Preparar el DOM para la nueva escena (SOLID - SRP)
      */
     prepareDOM(sceneName) {
-        // Limpiar completamente el body
-        document.body.innerHTML = '';
+        // Verificar y re-configurar scene-container antes de cada transición
+        this.ensureSceneContainerReady();
         
-        // Restablecer estilos del body
-        document.body.style.cssText = `
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: #000;
-            color: #fff;
-            font-family: Arial, sans-serif;
-        `;
-
-        // Preparar contenedor base según el tipo de escena
-        if (sceneName === 'battle' || sceneName === 'characterSelect') {
-            this.createCanvasContainer();
-        } else {
-            this.createUIContainer();
+        // Ocultar canvas del juego si existe
+        const gameCanvas = document.getElementById('gameCanvas');
+        if (gameCanvas) {
+            gameCanvas.style.display = 'none';
         }
+        
+        // También ocultar el contenedor del canvas
+        const canvasContainer = document.getElementById('canvasContainer');
+        if (canvasContainer) {
+            canvasContainer.style.display = 'none';
+        }
+        
+        // NO limpiar contenedores aquí - se hará después de crear la nueva escena
+        this.log('debug', `DOM preparado para escena ${sceneName}`);
     }
 
     /**
-     * Crear contenedor para escenas con canvas
+     * Asegurar que scene-container esté listo para uso
      */
-    createCanvasContainer() {
-        const container = document.createElement('div');
-        container.id = 'canvasContainer';
-        container.style.cssText = 'position: relative;';
+    ensureSceneContainerReady() {
+        let sceneContainer = document.getElementById('scene-container');
         
-        const canvas = document.createElement('canvas');
-        canvas.id = 'gameCanvas';
-        canvas.width = 1200;
-        canvas.height = 600;
-        canvas.style.border = '1px solid #fff';
+        if (!sceneContainer) {
+            console.warn('🔄 scene-container desaparecido, recreando...');
+            sceneContainer = document.createElement('div');
+            sceneContainer.id = 'scene-container';
+            document.body.appendChild(sceneContainer);
+        }
         
-        container.appendChild(canvas);
-        document.body.appendChild(container);
-    }
-
-    /**
-     * Crear contenedor para escenas de UI
-     */
-    createUIContainer() {
-        const container = document.createElement('div');
-        container.id = 'uiContainer';
-        container.style.cssText = `
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+        // Forzar estilos críticos SIEMPRE antes de cada uso
+        sceneContainer.style.cssText = `
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 1000 !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            background: transparent !important;
+            display: block !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
         `;
-        document.body.appendChild(container);
+        
+        // Verificar que esté en el DOM
+        if (!document.body.contains(sceneContainer)) {
+            document.body.appendChild(sceneContainer);
+            console.log('🔄 scene-container re-añadido al DOM');
+        }
+        
+        this.sceneContainer = sceneContainer;
+        
+        console.log('✅ scene-container verificado y listo:', {
+            id: sceneContainer.id,
+            display: sceneContainer.style.display,
+            visibility: sceneContainer.style.visibility,
+            zIndex: sceneContainer.style.zIndex,
+            bounds: sceneContainer.getBoundingClientRect(),
+            inDOM: document.body.contains(sceneContainer)
+        });
     }
 
     /**
-     * Crear nueva escena con manejo robusto de errores
+     * Limpiar contenedores de escenas anteriores DESPUÉS de crear la nueva
+     */
+    cleanupPreviousSceneContainers(currentSceneId) {
+        const existingContainers = document.querySelectorAll('[id$="-scene-container"]:not([id="scene-container"])');
+        existingContainers.forEach(container => {
+            // No limpiar el contenedor de la escena actual ni el contenedor principal
+            if (container.id !== currentSceneId && container.id !== 'scene-container' && container.parentNode) {
+                console.log(`🧹 SceneManager: Limpiando contenedor anterior ${container.id}`);
+                container.parentNode.removeChild(container);
+            }
+        });
+        this.log('debug', `Contenedores de escenas anteriores limpiados (excepto ${currentSceneId})`);
+    }
+
+    /**
+     * Crear nueva instancia de escena (SOLID - SRP)
      */
     async createNewScene(sceneName, data) {
         const SceneClass = this.scenes.get(sceneName);
         
         if (!SceneClass) {
-            throw new Error(`Escena no encontrada: ${sceneName}`);
+            throw new Error(`Escena ${sceneName} no está registrada`);
         }
-
-        try {
-            console.log(`🎬 Creando escena: ${sceneName} con data:`, data);
+        
+        // Usar instancia proporcionada en data (si existe)
+        if (data && data.scene) {
+            console.log(`🔄 SceneManager: Verificando instancia proporcionada para ${sceneName}:`, {
+                provided: !!data.scene,
+                sceneType: data.scene.constructor.name,
+                expectedType: SceneClass.name,
+                isInstance: data.scene instanceof SceneClass
+            });
             
-            // Crear instancia de la nueva escena
-            if (data?.scene) {
-                // Si se proporciona una instancia de escena ya creada
+            if (data.scene instanceof SceneClass) {
                 this.currentScene = data.scene;
+                this.log('debug', `Usando instancia existente de escena ${sceneName}`);
             } else {
-                // Manejo especial para VictoryScene
-                if (sceneName === 'victory' && data) {
-                    this.currentScene = new SceneClass(data);
-                } else {
-                    // Crear nueva instancia normal
-                    this.currentScene = data ? new SceneClass(data) : new SceneClass();
-                }
+                console.warn(`⚠️ SceneManager: Instancia proporcionada no es del tipo correcto. Creando nueva instancia.`);
+                this.currentScene = new SceneClass(data ? data : undefined);
+                this.log('debug', `Nueva instancia de escena ${sceneName} creada (por tipo incorrecto)`);
             }
+        }
+        // Usar instancia precargada si está disponible y el caching está habilitado
+        else if (this.config.enableCaching && this.sceneInstances.has(sceneName)) {
+            this.currentScene = this.sceneInstances.get(sceneName);
+            this.log('debug', `Usando escena ${sceneName} desde caché`);
+        } else {
+            // Crear nueva instancia
+            console.log(`🔄 SceneManager: Creando nueva instancia de ${sceneName}...`);
+            this.currentScene = new SceneClass(data ? data : undefined);
+            this.log('debug', `Nueva instancia de escena ${sceneName} creada`);
+        }
+        
+        // Configurar callbacks de transición si la escena los acepta
+        this.setupSceneCallbacks(this.currentScene);
+        
+        // Inicializar si no está inicializada
+        if (typeof this.currentScene.init === 'function') {
+            await this.currentScene.init();
+        }
+        
+        // Renderizar la escena
+        if (typeof this.currentScene.render === 'function') {
+            console.log(`🔄 SceneManager: Renderizando escena ${sceneName}...`);
+            await this.currentScene.render();
+            console.log(`✅ SceneManager: Escena ${sceneName} renderizada`);
+        }
+        
+        // Verificar que la escena se haya añadido al DOM
+        const currentSceneContainerId = `${sceneName}-scene-container`;
+        const sceneContainerInDOM = document.getElementById(currentSceneContainerId);
+        
+        if (sceneContainerInDOM) {
+            console.log(`✅ SceneManager: Container ${currentSceneContainerId} está en el DOM:`, {
+                id: sceneContainerInDOM.id,
+                display: sceneContainerInDOM.style.display,
+                visibility: sceneContainerInDOM.style.visibility,
+                opacity: sceneContainerInDOM.style.opacity,
+                zIndex: sceneContainerInDOM.style.zIndex,
+                bounds: sceneContainerInDOM.getBoundingClientRect(),
+                parentElement: sceneContainerInDOM.parentElement?.id,
+                children: sceneContainerInDOM.children.length
+            });
+        } else {
+            console.error(`❌ SceneManager: Container ${currentSceneContainerId} NO está en el DOM después del render`);
+        }
+        
+        // DESPUÉS de renderizar, limpiar contenedores de escenas anteriores
+        this.cleanupPreviousSceneContainers(currentSceneContainerId);
+        
+        this.log('info', `Escena ${sceneName} creada y renderizada correctamente`);
+    }
 
-            // Configurar propiedades adicionales
-            this.currentScene.sceneName = sceneName;
-            this.currentScene.sceneManager = this;
-
-            // Inicializar la escena si tiene método init
-            if (typeof this.currentScene.init === 'function') {
-                if (sceneName === 'victory' && data) {
-                    await this.currentScene.init(data);
-                } else {
-                    await this.currentScene.init();
-                }
-            }
-
-            console.log(`✅ Escena ${sceneName} creada e inicializada correctamente`);
-
-            // Renderizar la escena
-            if (typeof this.currentScene.render === 'function') {
-                if (this.currentScene.render.constructor.name === 'AsyncFunction') {
-                    await this.currentScene.render();
-                } else {
-                    this.currentScene.render();
-                }
-            } else {
-                console.warn(`⚠️ La escena ${sceneName} no tiene método render`);
-            }
-            
-        } catch (error) {
-            console.error(`❌ Error creando escena ${sceneName}:`, error);
-            throw error;
+    /**
+     * Configura callbacks para la escena (SOLID - DIP)
+     */
+    setupSceneCallbacks(scene) {
+        // Agregar callbacks comunes si la escena los acepta
+        if (typeof scene.onTransitionTo === 'function') {
+            scene.onTransitionTo = (targetScene, data) => this.transitionTo(targetScene, data);
+        }
+        
+        if (typeof scene.onGoBack === 'function') {
+            scene.onGoBack = () => this.goBack();
         }
     }
 
     /**
-     * Actualizar historial de escenas
+     * Actualiza el historial de escenas (SOLID - SRP)
      */
     updateSceneHistory(sceneName) {
-        this.sceneHistory.push(sceneName);
+        // Evitar duplicados consecutivos
+        if (this.sceneHistory.length === 0 || 
+            this.sceneHistory[this.sceneHistory.length - 1] !== sceneName) {
+            this.sceneHistory.push(sceneName);
+        }
         
-        // Mantener solo las últimas N escenas
-        if (this.sceneHistory.length > this.maxHistorySize) {
+        // Mantener tamaño máximo del historial
+        if (this.sceneHistory.length > this.config.maxHistorySize) {
             this.sceneHistory.shift();
         }
-    }
-
-    /**
-     * Manejar errores de transición
-     */
-    async handleTransitionError(error, sceneName) {
-        console.error(`❌ Error transitioning to ${sceneName}:`, error);
         
-        // Intentar mostrar una escena de error o fallback
-        try {
-            document.body.innerHTML = `
-                <div style="
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100vh;
-                    background: #1a1a1a;
-                    color: #ff4444;
-                    font-family: Arial, sans-serif;
-                    text-align: center;
-                ">
-                    <h1>⚠️ Error de Transición</h1>
-                    <p>No se pudo cargar la escena: ${sceneName}</p>
-                    <p style="color: #888; font-size: 14px;">${error.message}</p>
-                    <button onclick="location.reload()" style="
-                        background: #333;
-                        color: white;
-                        border: 1px solid #666;
-                        padding: 10px 20px;
-                        margin-top: 20px;
-                        cursor: pointer;
-                        border-radius: 5px;
-                    ">Reiniciar Aplicación</button>
-                </div>
-            `;
-        } catch (fallbackError) {
-            console.error('❌ Error en fallback de transición:', fallbackError);
-            // Último recurso: recargar la página
-            window.location.reload();
-        }
+        this.log('debug', `Historial actualizado: ${this.sceneHistory.join(' -> ')}`);
     }
 
     /**
-     * Métodos de utilidad
+     * Finaliza la transición (SOLID - SRP)
+     */
+    finalizeTransition(sceneName) {
+        this.isTransitioning = false;
+        this.transitionData = null;
+        
+        console.log(`✅ SceneManager: Transición a ${sceneName} completada exitosamente`);
+        
+        this.emit('transitionComplete', { 
+            scene: sceneName, 
+            timestamp: Date.now() 
+        });
+        
+        this.log('info', `Transición a ${sceneName} completada`);
+    }
+
+    /**
+     * Navegar hacia atrás en el historial
+     */
+    async goBack() {
+        if (this.sceneHistory.length < 2) {
+            this.log('warn', 'No hay escena anterior en el historial');
+            return false;
+        }
+        
+        // Remover escena actual del historial
+        this.sceneHistory.pop();
+        
+        // Obtener escena anterior
+        const previousScene = this.sceneHistory[this.sceneHistory.length - 1];
+        
+        // Transicionar sin agregar al historial
+        const originalHistoryLength = this.sceneHistory.length;
+        const result = await this.transitionTo(previousScene);
+        
+        // Restaurar longitud del historial para evitar duplicación
+        if (result) {
+            this.sceneHistory.length = originalHistoryLength;
+        }
+        
+        return result;
+    }
+
+    /**
+     * Limpieza específica del SceneManager
+     */
+    cleanupSpecific() {
+        // Limpiar event listeners globales
+        if (this.globalKeyHandler) {
+            window.removeEventListener('keydown', this.globalKeyHandler);
+        }
+        
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+        }
+        
+        // Limpiar escena actual
+        if (this.currentScene && typeof this.currentScene.cleanup === 'function') {
+            this.currentScene.cleanup();
+        }
+        
+        // Limpiar instancias precargadas
+        this.sceneInstances.forEach((instance, name) => {
+            if (typeof instance.cleanup === 'function') {
+                instance.cleanup();
+            }
+        });
+        
+        // Limpiar referencias
+        this.scenes.clear();
+        this.sceneInstances.clear();
+        this.currentScene = null;
+        this.sceneHistory = [];
+        
+        // Remover contenedor de escenas
+        if (this.sceneContainer && this.sceneContainer.parentNode) {
+            this.sceneContainer.parentNode.removeChild(this.sceneContainer);
+        }
+        
+        this.log('info', 'SceneManager limpiado completamente');
+    }
+
+    /**
+     * Métodos de acceso (SOLID - ISP)
      */
     getCurrentScene() {
         return this.currentScene;
     }
 
     getCurrentSceneName() {
-        return this.currentScene?.sceneName || null;
+        return this.currentScene?.constructor.name || null;
     }
 
     isSceneActive(sceneName) {
@@ -297,65 +529,23 @@ export default class SceneManager {
         return [...this.sceneHistory];
     }
 
-    /**
-     * Navegar a la escena anterior
-     */
-    async goBack() {
-        if (this.sceneHistory.length < 2) {
-            console.warn('⚠️ No hay escena anterior disponible');
-            return false;
-        }
-        
-        // Remover escena actual del historial
-        this.sceneHistory.pop();
-        
-        // Obtener escena anterior
-        const previousScene = this.sceneHistory[this.sceneHistory.length - 1];
-        
-        // Transicionar sin añadir al historial nuevamente
-        const originalHistory = [...this.sceneHistory];
-        const result = await this.transitionTo(previousScene);
-        
-        if (result) {
-            this.sceneHistory = originalHistory; // Restaurar historial
-        }
-        
-        return result;
+    getRegisteredScenes() {
+        return Array.from(this.scenes.keys());
+    }
+
+    hasScene(sceneName) {
+        return this.scenes.has(sceneName);
     }
 
     /**
-     * Comunicación entre escenas
+     * Métodos de estado adicionales
      */
-    sendDataToScene(data) {
-        if (this.currentScene && typeof this.currentScene.receiveData === 'function') {
-            this.currentScene.receiveData(data);
-        }
-    }
-
-    /**
-     * Pausar/reanudar la escena actual
-     */
-    pauseCurrentScene() {
-        if (this.currentScene && typeof this.currentScene.pause === 'function') {
-            this.currentScene.pause();
-        }
-    }
-
-    resumeCurrentScene() {
-        if (this.currentScene && typeof this.currentScene.resume === 'function') {
-            this.currentScene.resume();
-        }
-    }
-
-    /**
-     * Cleanup completo del SceneManager
-     */
-    async shutdown() {
-        await this.cleanupCurrentScene();
-        this.currentScene = null;
-        this.scenes.clear();
-        this.sceneHistory = [];
-        this.isTransitioning = false;
-        console.log('🛑 SceneManager shutdown completo');
+    getTransitionState() {
+        return {
+            isTransitioning: this.isTransitioning,
+            transitionData: this.transitionData,
+            currentScene: this.getCurrentSceneName(),
+            history: this.getSceneHistory()
+        };
     }
 }

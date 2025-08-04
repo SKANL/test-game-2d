@@ -1,18 +1,29 @@
 /**
- * InputManager - Gestiona las entradas del usuario (teclado)
- * Sección 7.1 del Documento Maestro
+ * InputManager - Gestiona las entradas del usuario REFACTORIZADO v2.0
+ * PRINCIPIOS SOLID: SRP - Solo gestión de inputs del usuario
+ * OCP: Extensible para nuevos tipos de input (gamepad, touch, etc.)
+ * ISP: Interfaces específicas para diferentes tipos de input
+ * DIP: Depende de abstracciones para eventos del DOM
+ * HERENCIA: Extiende BaseManager para funcionalidad común
  */
-class InputManager {
-    constructor() {
+import BaseManager from '../domain/base/BaseManager.js';
+
+export default class InputManager extends BaseManager {
+    constructor(config = {}) {
+        super('InputManager', {
+            autoStart: true,
+            enableCooldowns: true,
+            cooldownTime: 300,
+            maxBufferLength: 20,
+            ...config
+        });
+
         // Estado de las teclas
         this.keys = {};
         
         // Buffers de entrada para cada jugador (para combos y movimientos especiales)
         this.inputBuffer_p1 = [];
         this.inputBuffer_p2 = [];
-        
-        // Longitud máxima del buffer
-        this.MAX_BUFFER_LENGTH = 20;
         
         // Lista de acciones que solo deben ejecutarse una vez por presión
         this.singlePressActions = ['punch', 'kick', 'special', 'super'];
@@ -49,15 +60,33 @@ class InputManager {
         
         // Cooldowns para acciones
         this.actionCooldowns = {};
-        this.COOLDOWN_TIME = 300; // Tiempo de enfriamiento en milisegundos
         
-        // Inicializar los event listeners
-        this.init();
+        // Event handlers (para poder removerlos después)
+        this.keydownHandler = null;
+        this.keyupHandler = null;
     }
-    
-    init() {
+
+    /**
+     * Inicialización específica del InputManager (SOLID - SRP)
+     */
+    async initializeSpecific() {
+        this.log('info', 'Inicializando InputManager con arquitectura SOLID');
+        
+        try {
+            this.setupEventListeners();
+            this.log('info', 'InputManager inicializado correctamente');
+        } catch (error) {
+            this.handleError('Error inicializando InputManager', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Configura los event listeners (SOLID - SRP)
+     */
+    setupEventListeners() {
         // Event listener para keydown (tecla presionada)
-        window.addEventListener('keydown', (event) => {
+        this.keydownHandler = (event) => {
             if (!this.keys[event.key]) {
                 this.keys[event.key] = true;
                 // Reiniciar el estado de la acción al presionar una nueva tecla
@@ -67,15 +96,16 @@ class InputManager {
                             const actionKey = `${player}_${action}`;
                             if (!this.actionStates[actionKey]) {
                                 this.actionStates[actionKey] = true;
+                                this.log('debug', `Acción activada: ${actionKey}`);
                             }
                         }
                     }
                 }
             }
-        });
+        };
 
         // Event listener para keyup (tecla liberada)
-        window.addEventListener('keyup', (event) => {
+        this.keyupHandler = (event) => {
             this.keys[event.key] = false;
             // Resetear el estado de la acción al soltar la tecla
             for (const [player, mapping] of Object.entries(this.keyMap)) {
@@ -83,14 +113,36 @@ class InputManager {
                     if (key === event.key && this.singlePressActions.includes(action)) {
                         const actionKey = `${player}_${action}`;
                         this.actionStates[actionKey] = false;
+                        this.log('debug', `Acción desactivada: ${actionKey}`);
                     }
                 }
             }
-        });
+        };
+
+        window.addEventListener('keydown', this.keydownHandler);
+        window.addEventListener('keyup', this.keyupHandler);
+        
+        this.log('debug', 'Event listeners configurados');
     }
-    
-    // Actualizar el estado de las entradas (llamado en cada frame)
-    update() {
+
+    /**
+     * Método legacy mantenido para compatibilidad
+     * @deprecated Use initializeSpecific() instead
+     */
+    init() {
+        console.warn('InputManager.init() está deprecated, use initialize() en su lugar');
+        if (!this.isInitialized) {
+            // Llamar al método init() de BaseManager que es async pero no podemos await aquí
+            super.init().catch(error => {
+                this.log('error', `Error en inicialización legacy: ${error.message}`);
+            });
+        }
+    }
+
+    /**
+     * Actualización específica del InputManager (SOLID - SRP)
+     */
+    updateSpecific(deltaTime) {
         // Procesar entradas del jugador 1
         this.processPlayerInputs('p1');
         
@@ -100,7 +152,10 @@ class InputManager {
         // Limpieza de buffers antiguos
         this.cleanupBuffers();
     }
-    
+
+    /**
+     * Procesar entradas de un jugador específico (SOLID - SRP)
+     */
     processPlayerInputs(player) {
         const keyMap = this.keyMap[player];
         const buffer = player === 'p1' ? this.inputBuffer_p1 : this.inputBuffer_p2;
@@ -112,7 +167,7 @@ class InputManager {
 
             if (this.keys[key] && !this.keyLocks[key]) {
                 // Verificar si la acción está en cooldown
-                if (!this.actionCooldowns[action] || now - this.actionCooldowns[action] >= this.COOLDOWN_TIME) {
+                if (!this.actionCooldowns[action] || now - this.actionCooldowns[action] >= this.config.cooldownTime) {
                     // Añadir la acción al buffer con timestamp
                     buffer.push({
                         action: action,
@@ -120,36 +175,38 @@ class InputManager {
                     });
                     this.keyLocks[key] = true; // Bloquear la acción hasta que se libere la tecla
                     this.actionCooldowns[action] = now; // Registrar el tiempo de la acción
+                    
+                    this.recordMetric('inputProcessed', 1);
                 }
             }
         }
     }
-    
+
+    /**
+     * Limpia buffers antiguos (SOLID - SRP)
+     */
     cleanupBuffers() {
         // Mantener los buffers en la longitud máxima
-        if (this.inputBuffer_p1.length > this.MAX_BUFFER_LENGTH) {
-            this.inputBuffer_p1 = this.inputBuffer_p1.slice(-this.MAX_BUFFER_LENGTH);
+        if (this.inputBuffer_p1.length > this.config.maxBufferLength) {
+            this.inputBuffer_p1 = this.inputBuffer_p1.slice(-this.config.maxBufferLength);
         }
         
-        if (this.inputBuffer_p2.length > this.MAX_BUFFER_LENGTH) {
-            this.inputBuffer_p2 = this.inputBuffer_p2.slice(-this.MAX_BUFFER_LENGTH);
+        if (this.inputBuffer_p2.length > this.config.maxBufferLength) {
+            this.inputBuffer_p2 = this.inputBuffer_p2.slice(-this.config.maxBufferLength);
         }
     }
-    
-    // Verificar si una secuencia específica se ha introducido (para movimientos especiales)
+
     /**
-     * Verifica si una secuencia de acciones está presente en el buffer del jugador dentro de una ventana de tiempo.
-     * @param {string[]} sequence - Array de acciones (ej: ['down', 'forward', 'attack1'])
-     * @param {number} playerIndex - 1 para P1, 2 para P2
-     * @param {number} windowMs - Tiempo máximo total para la secuencia (default 500ms)
-     * @returns {boolean}
+     * Verifica si una secuencia de acciones está presente en el buffer del jugador (SOLID - SRP)
      */
     checkSequence(sequence, playerIndex, windowMs = 500) {
         const buffer = playerIndex === 1 ? this.inputBuffer_p1 : this.inputBuffer_p2;
         if (buffer.length < sequence.length) return false;
+        
         let seqIdx = sequence.length - 1;
         let now = Date.now();
         let lastTime = null;
+        
         for (let i = buffer.length - 1; i >= 0; i--) {
             if (buffer[i].action === sequence[seqIdx]) {
                 if (lastTime && (lastTime - buffer[i].timestamp > 150)) return false;
@@ -165,12 +222,16 @@ class InputManager {
         return false;
     }
     
-    // Métodos de utilidad para comprobar estados de teclas individuales
+    /**
+     * Verifica si una tecla está presionada (SOLID - ISP)
+     */
     isPressed(key) {
         return !!this.keys[key];
     }
     
-    // Comprobar si una acción específica está siendo presionada por un jugador
+    /**
+     * Verifica si una acción específica está siendo presionada (SOLID - ISP)
+     */
     isActionPressed(player, action) {
         const keyMap = this.keyMap[player];
         const keyPressed = this.isPressed(keyMap[action]);
@@ -190,14 +251,38 @@ class InputManager {
         return keyPressed;
     }
     
-    // Método para personalizar las teclas (para futuras opciones de configuración)
+    /**
+     * Remapea una tecla para un jugador y acción específicos (SOLID - OCP)
+     */
     remapKey(player, action, newKey) {
         if (this.keyMap[player] && this.keyMap[player][action]) {
             this.keyMap[player][action] = newKey;
+            this.log('info', `Tecla remapeada: ${player}.${action} -> ${newKey}`);
             return true;
         }
         return false;
     }
-}
 
-export default InputManager;
+    /**
+     * Limpieza específica del InputManager (SOLID - SRP)
+     */
+    async cleanupSpecific() {
+        // Remover event listeners
+        if (this.keydownHandler) {
+            window.removeEventListener('keydown', this.keydownHandler);
+        }
+        if (this.keyupHandler) {
+            window.removeEventListener('keyup', this.keyupHandler);
+        }
+        
+        // Limpiar buffers
+        this.inputBuffer_p1 = [];
+        this.inputBuffer_p2 = [];
+        this.keys = {};
+        this.actionStates = {};
+        this.keyLocks = {};
+        this.actionCooldowns = {};
+        
+        this.log('info', 'InputManager limpiado');
+    }
+}

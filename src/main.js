@@ -31,16 +31,33 @@ async function initializeGame() {
         // Crear e inicializar el controlador de aplicación
         const applicationController = new ApplicationController();
         
+        // CRÍTICO: Hacer el ApplicationController disponible globalmente ANTES de inicializar
+        // para que las escenas puedan acceder a él desde el constructor
+        window.applicationController = applicationController;
+        console.log('✅ ApplicationController registrado globalmente');
+        
         console.log('✅ ApplicationController creado, inicializando...');
         await applicationController.initialize();
         
         console.log('✅ Aplicación inicializada correctamente');
         
-        // Solo hacer disponible globalmente en modo desarrollo para debugging
+        // Solo hacer disponible globalmente en modo desarrollo para debugging adicional
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             window.debugController = applicationController;
             console.log('🐛 Debug controller disponible como window.debugController');
         }
+        
+        // Timeout de emergencia para verificar si la UI se cargó
+        setTimeout(() => {
+            const sceneContainer = document.getElementById('scene-container');
+            if (!sceneContainer || sceneContainer.children.length === 0) {
+                console.error('🚨 EMERGENCIA: No se detectó UI después de 5 segundos');
+                console.log('💡 Ejecuta window.debugShowLogin() para mostrar login manualmente');
+                console.log('💡 Ejecuta window.emergencyUI() para UI de emergencia');
+            } else {
+                console.log('✅ UI detectada correctamente');
+            }
+        }, 5000);
         
     } catch (error) {
         console.error('❌ Error fatal al inicializar la aplicación:', error);
@@ -128,6 +145,19 @@ window.addEventListener('error', (event) => {
         column: event.colno,
         error: event.error
     });
+    
+    // Información adicional para debug
+    if (event.error) {
+        console.error('Stack trace:', event.error.stack);
+    }
+});
+
+/**
+ * Manejar promesas rechazadas no capturadas
+ */
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('❌ Promesa rechazada no capturada:', event.reason);
+    event.preventDefault();
 });
 
 /**

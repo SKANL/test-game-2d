@@ -1,146 +1,315 @@
 /**
  * AudioManager - Sistema básico de audio para el juego
- * Sección 8 del Documento Maestro
+ * REFACTORIZADO: Aplica principios SOLID y hereda de BaseManager
+ * SRP: Responsabilidad única de gestionar audio (sonidos y música)
+ * OCP: Extensible para nuevos tipos de audio (3D, efectos avanzados)
+ * ISP: Interfaces específicas para sonidos y música
+ * DIP: Depende de abstracciones del Web Audio API
  */
-export default class AudioManager {
-    constructor() {
+import BaseManager from '../domain/base/BaseManager.js';
+
+export default class AudioManager extends BaseManager {
+    constructor(config = {}) {
+        super('AudioManager', {
+            autoStart: true,
+            volume: 0.7,
+            musicVolume: 0.5,
+            sfxVolume: 0.8,
+            isEnabled: true,
+            enableSpatialAudio: false,
+            maxSimultaneousSounds: 10,
+            ...config
+        });
+
+        // Estado específico del audio
         this.sounds = new Map();
         this.music = null;
-        this.volume = 0.7;
-        this.musicVolume = 0.5;
-        this.sfxVolume = 0.8;
-        this.isEnabled = true;
-        this.initialized = false;
+        this.activeSounds = new Set();
+        this.audioContext = null;
+        this.masterGainNode = null;
+        this.musicGainNode = null;
+        this.sfxGainNode = null;
     }
 
     /**
-     * Inicializa el AudioManager cargando los sonidos básicos
+     * Inicialización específica del AudioManager (SOLID - SRP)
      */
-    async init() {
-        if (this.initialized) {
-            console.log('🔊 AudioManager ya está inicializado');
-            return;
-        }
-
+    async initializeSpecific() {
+        this.log('info', 'Inicializando AudioManager con arquitectura SOLID');
+        
         try {
+            // Inicializar Web Audio API si está disponible
+            await this.initializeWebAudio();
+            
+            // Cargar sonidos básicos
             await this.loadBasicSounds();
-            this.initialized = true;
-            console.log('✅ AudioManager v2.0 inicializado correctamente');
+            
+            // Configurar controles de volumen
+            this.setupVolumeControls();
+            
         } catch (error) {
-            console.error('❌ Error inicializando AudioManager:', error);
+            this.handleError('Error inicializando AudioManager', error);
             throw error;
         }
     }
 
+    /**
+     * Inicializa Web Audio API (SOLID - SRP)
+     */
+    async initializeWebAudio() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Crear nodos de ganancia para control de volumen
+            this.masterGainNode = this.audioContext.createGain();
+            this.musicGainNode = this.audioContext.createGain();
+            this.sfxGainNode = this.audioContext.createGain();
+            
+            // Conectar nodos
+            this.musicGainNode.connect(this.masterGainNode);
+            this.sfxGainNode.connect(this.masterGainNode);
+            this.masterGainNode.connect(this.audioContext.destination);
+            
+            // Configurar volúmenes iniciales
+            this.masterGainNode.gain.value = this.config.volume;
+            this.musicGainNode.gain.value = this.config.musicVolume;
+            this.sfxGainNode.gain.value = this.config.sfxVolume;
+            
+            this.log('debug', 'Web Audio API inicializada correctamente');
+            
+        } catch (error) {
+            this.log('warn', 'Web Audio API no disponible, usando HTML5 Audio');
+            this.audioContext = null;
+        }
+    }
+
+    /**
+     * Configura controles de volumen (SOLID - SRP)
+     */
+    setupVolumeControls() {
+        // Configurar volúmenes desde la configuración
+        this.setVolume(this.config.volume);
+        this.setMusicVolume(this.config.musicVolume);
+        this.setSfxVolume(this.config.sfxVolume);
+        
+        this.log('debug', 'Controles de volumen configurados');
+    }
+
+    /**
+     * Carga sonidos básicos del juego (SOLID - SRP)
+     */
+    async loadBasicSounds() {
+        const soundsToLoad = [
+            { name: 'hit', url: 'src/assets/audio/hit.mp3' },
+            { name: 'block', url: 'src/assets/audio/block.mp3' },
+            { name: 'jump', url: 'src/assets/audio/jump.mp3' },
+            { name: 'special', url: 'src/assets/audio/special.mp3' }
+        ];
+
+        for (const sound of soundsToLoad) {
+            await this.loadSound(sound.name, sound.url);
+        }
+        
+        this.log('info', 'Sonidos básicos cargados correctamente');
+    }
+
+    /**
+     * Carga un sonido individual (SOLID - SRP)
+     */
     async loadSound(name, url) {
         try {
             const audio = new Audio(url);
             audio.preload = 'auto';
+            audio.volume = this.config.sfxVolume;
+            
+            // Configurar para uso reutilizable
+            audio.addEventListener('ended', () => {
+                this.activeSounds.delete(audio);
+            });
+            
             this.sounds.set(name, audio);
-            console.log(`✅ Sonido cargado: ${name}`);
+            this.recordMetric('soundLoaded', 1);
+            this.log('debug', `Sonido cargado: ${name}`);
+            
             return audio;
         } catch (error) {
-            console.warn(`⚠️ No se pudo cargar el sonido: ${name}`, error);
+            this.log('warn', `No se pudo cargar el sonido: ${name}`, error);
             return null;
         }
     }
 
+    /**
+     * Carga música de fondo (SOLID - SRP)
+     */
     async loadMusic(url) {
         try {
             this.music = new Audio(url);
             this.music.loop = true;
-            this.music.volume = this.musicVolume;
-            console.log(`✅ Música cargada: ${url}`);
+            this.music.volume = this.config.musicVolume;
+            this.music.preload = 'auto';
+            
+            this.recordMetric('musicLoaded', 1);
+            this.log('debug', 'Música cargada correctamente');
+            
             return this.music;
         } catch (error) {
-            console.warn(`⚠️ No se pudo cargar la música: ${url}`, error);
+            this.handleError('Error cargando música', error);
             return null;
         }
     }
 
+    /**
+     * Reproduce un sonido (SOLID - SRP)
+     */
     playSound(name, volume = null) {
-        if (!this.isEnabled) return;
-        
+        if (!this.config.isEnabled) {
+            this.log('debug', 'Audio deshabilitado');
+            return;
+        }
+
         const sound = this.sounds.get(name);
-        if (sound) {
-            try {
-                sound.currentTime = 0;
-                sound.volume = (volume || this.sfxVolume) * this.volume;
-                sound.play().catch(e => console.warn(`No se pudo reproducir ${name}:`, e));
-            } catch (error) {
-                console.warn(`Error reproduciendo ${name}:`, error);
-            }
-        } else {
-            console.warn(`Sonido no encontrado: ${name}`);
+        if (!sound) {
+            this.log('warn', `Sonido no encontrado: ${name}`);
+            return;
         }
-    }
 
-    playMusic() {
-        if (!this.isEnabled || !this.music) return;
-        
+        // Verificar límite de sonidos simultáneos
+        if (this.activeSounds.size >= this.config.maxSimultaneousSounds) {
+            this.log('debug', 'Límite de sonidos simultáneos alcanzado');
+            return;
+        }
+
         try {
-            this.music.volume = this.musicVolume * this.volume;
-            this.music.play().catch(e => console.warn('No se pudo reproducir música:', e));
+            // Clonar el audio para permitir múltiples reproducciones
+            const audioClone = sound.cloneNode();
+            audioClone.volume = volume !== null ? volume : this.config.sfxVolume;
+            
+            this.activeSounds.add(audioClone);
+            audioClone.play();
+            
+            this.recordMetric('soundPlayed', 1);
+            this.log('debug', `Sonido reproducido: ${name}`);
+            
         } catch (error) {
-            console.warn('Error reproduciendo música:', error);
+            this.log('warn', `Error reproduciendo sonido: ${name}`, error);
         }
     }
 
+    /**
+     * Reproduce música de fondo (SOLID - SRP)
+     */
+    playMusic() {
+        if (!this.config.isEnabled || !this.music) {
+            this.log('debug', 'Música no disponible o audio deshabilitado');
+            return;
+        }
+
+        try {
+            this.music.currentTime = 0;
+            this.music.play();
+            this.recordMetric('musicPlayed', 1);
+            this.log('debug', 'Música iniciada');
+        } catch (error) {
+            this.log('warn', 'Error reproduciendo música', error);
+        }
+    }
+
+    /**
+     * Detiene la música (SOLID - SRP)
+     */
     stopMusic() {
         if (this.music) {
             this.music.pause();
             this.music.currentTime = 0;
+            this.log('debug', 'Música detenida');
         }
     }
 
+    /**
+     * Configura el volumen general (SOLID - ISP)
+     */
     setVolume(volume) {
-        this.volume = Math.max(0, Math.min(1, volume));
-        if (this.music) {
-            this.music.volume = this.musicVolume * this.volume;
+        this.config.volume = Math.max(0, Math.min(1, volume));
+        if (this.masterGainNode) {
+            this.masterGainNode.gain.value = this.config.volume;
         }
+        this.log('debug', `Volumen general configurado: ${this.config.volume}`);
     }
 
+    /**
+     * Configura el volumen de música (SOLID - ISP)
+     */
     setMusicVolume(volume) {
-        this.musicVolume = Math.max(0, Math.min(1, volume));
+        this.config.musicVolume = Math.max(0, Math.min(1, volume));
         if (this.music) {
-            this.music.volume = this.musicVolume * this.volume;
+            this.music.volume = this.config.musicVolume;
         }
+        if (this.musicGainNode) {
+            this.musicGainNode.gain.value = this.config.musicVolume;
+        }
+        this.log('debug', `Volumen de música configurado: ${this.config.musicVolume}`);
     }
 
+    /**
+     * Configura el volumen de efectos de sonido (SOLID - ISP)
+     */
     setSfxVolume(volume) {
-        this.sfxVolume = Math.max(0, Math.min(1, volume));
+        this.config.sfxVolume = Math.max(0, Math.min(1, volume));
+        if (this.sfxGainNode) {
+            this.sfxGainNode.gain.value = this.config.sfxVolume;
+        }
+        this.log('debug', `Volumen de SFX configurado: ${this.config.sfxVolume}`);
     }
 
+    /**
+     * Habilita el audio (SOLID - ISP)
+     */
     enable() {
-        this.isEnabled = true;
+        this.config.isEnabled = true;
+        this.log('info', 'Audio habilitado');
     }
 
+    /**
+     * Deshabilita el audio (SOLID - ISP)
+     */
     disable() {
-        this.isEnabled = false;
+        this.config.isEnabled = false;
         this.stopMusic();
+        this.stopAllSounds();
+        this.log('info', 'Audio deshabilitado');
     }
 
-    // Cargar sonidos básicos del juego
-    async loadBasicSounds() {
-        // Como no tenemos archivos de audio reales, simulamos la carga
-        const basicSounds = [
-            'hit',
-            'block',
-            'jump',
-            'special',
-            'victory',
-            'defeat'
-        ];
+    /**
+     * Detiene todos los sonidos activos (SOLID - SRP)
+     */
+    stopAllSounds() {
+        for (const sound of this.activeSounds) {
+            sound.pause();
+            sound.currentTime = 0;
+        }
+        this.activeSounds.clear();
+        this.log('debug', 'Todos los sonidos detenidos');
+    }
 
-        for (const soundName of basicSounds) {
-            // Crear audio mock para desarrollo
-            this.sounds.set(soundName, {
-                play: () => console.log(`🔊 Reproduciendo: ${soundName}`),
-                currentTime: 0,
-                volume: this.sfxVolume
-            });
+    /**
+     * Limpieza específica del AudioManager (SOLID - SRP)
+     */
+    async cleanupSpecific() {
+        // Detener todos los sonidos y música
+        this.stopAllSounds();
+        this.stopMusic();
+
+        // Cerrar contexto de audio
+        if (this.audioContext && this.audioContext.state !== 'closed') {
+            await this.audioContext.close();
         }
 
-        console.log('✅ Sonidos básicos cargados (modo mock)');
+        // Limpiar referencias
+        this.sounds.clear();
+        this.activeSounds.clear();
+        this.music = null;
+        this.audioContext = null;
+
+        this.log('info', 'AudioManager limpiado completamente');
     }
 }

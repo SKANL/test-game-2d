@@ -1,5 +1,42 @@
-class CanvasRenderer {
-    constructor(canvasId = 'gameCanvas') {
+/**
+ * CanvasRenderer - Sistema de renderizado 2D refactorizado
+ * Principio SRP: Responsabilidad única de renderizar en canvas
+ * Principio OCP: Extensible sin modificar código existente
+ * Principio DIP: Depende de interfaces, no implementaciones concretas
+ */
+import IRenderer from '../domain/interfaces/IRenderer.js';
+import ResponsiveUtils from '../infrastructure/ResponsiveUtils.js';
+
+export default class CanvasRenderer extends IRenderer {
+    constructor(canvasId = 'gameCanvas', config = {}) {
+        super();
+        
+        // Configuración con valores por defecto (SOLID - OCP)
+        this.config = {
+            imageSmoothingEnabled: false,
+            debugMode: false,
+            enableResponsive: true,
+            ...config
+        };
+        
+        // Inicializar canvas (SOLID - SRP)
+        this.initializeCanvas(canvasId);
+        
+        // Inicializar estado interno (SOLID - SRP)
+        this.initializeState();
+        
+        // Configurar responsividad si está habilitada (SOLID - OCP)
+        if (this.config.enableResponsive) {
+            this.setupResponsive();
+        }
+        
+        console.log(`✅ CanvasRenderer v2.0 inicializado correctamente con canvas '${canvasId}'`);
+    }
+
+    /**
+     * Inicializa el canvas y contexto (SOLID - SRP)
+     */
+    initializeCanvas(canvasId) {
         this.canvas = document.getElementById(canvasId);
         
         if (!this.canvas) {
@@ -12,16 +49,85 @@ class CanvasRenderer {
             throw new Error(`No se pudo obtener el contexto 2D del canvas '${canvasId}'`);
         }
         
-        // Configurar suavizado
-        this.ctx.imageSmoothingEnabled = false;
-        
-        // Debug mode
-        this.debugMode = false;
-        
-        // Screen shake offset
+        // Configurar propiedades del contexto
+        this.ctx.imageSmoothingEnabled = this.config.imageSmoothingEnabled;
+    }
+
+    /**
+     * Inicializa el estado interno del renderer (SOLID - SRP)
+     */
+    initializeState() {
+        this.debugMode = this.config.debugMode;
         this.shakeOffset = { x: 0, y: 0 };
+        this.isInitialized = true;
+    }
+
+    /**
+     * Configura el sistema responsivo (SOLID - SRP)
+     */
+    setupResponsive() {
+        ResponsiveUtils.setupResponsiveCanvas(this.canvas);
+    }
+
+    /**
+     * Implementación de la interfaz IRenderer
+     */
+    init() {
+        if (this.isInitialized) return;
+        this.initializeState();
+    }
+
+    /**
+     * Limpia el canvas (implementación de IRenderer)
+     */
+    clear() {
+        this.clearCanvas();
+    }
+
+    /**
+     * Renderiza un sprite (implementación de IRenderer)
+     */
+    drawSprite(sprite, x, y) {
+        this.drawSpriteBasic(sprite, x, y);
+    }
+
+    /**
+     * Renderiza un rectángulo (implementación de IRenderer)
+     */
+    drawRect(x, y, width, height, color) {
+        this.ctx.save();
+        this.ctx.translate(this.shakeOffset.x, this.shakeOffset.y);
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(x, y, width, height);
+        this.ctx.restore();
+    }
+
+    /**
+     * Renderiza texto (implementación de IRenderer)
+     */
+    drawText(text, x, y, style = {}) {
+        this.ctx.save();
+        this.ctx.translate(this.shakeOffset.x, this.shakeOffset.y);
         
-        console.log(`✅ CanvasRenderer inicializado correctamente con canvas '${canvasId}'`);
+        // Aplicar estilos
+        this.ctx.font = style.font || '16px Arial';
+        this.ctx.fillStyle = style.color || 'white';
+        this.ctx.textAlign = style.align || 'left';
+        this.ctx.textBaseline = style.baseline || 'top';
+        
+        this.ctx.fillText(text, x, y);
+        this.ctx.restore();
+    }
+
+    /**
+     * Redimensiona el canvas (implementación de IRenderer)
+     */
+    resize(width, height) {
+        this.canvas.width = width;
+        this.canvas.height = height;
+        
+        // Reconfigurar propiedades que se pierden al redimensionar
+        this.ctx.imageSmoothingEnabled = this.config.imageSmoothingEnabled;
     }
 
     clearCanvas() {
@@ -36,7 +142,7 @@ class CanvasRenderer {
         this.ctx.restore();
     }
 
-    drawSprite(sprite, x, y, width = null, height = null, flipped = false) {
+    drawSpriteBasic(sprite, x, y, width = null, height = null, flipped = false) {
         this.ctx.save();
         
         // Aplicar screen shake
@@ -285,5 +391,3 @@ class CanvasRenderer {
         this.ctx.restore();
     }
 }
-
-export default CanvasRenderer;

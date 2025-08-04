@@ -2,29 +2,15 @@
  * VictoryScene - Pantalla de victoria con puntuación y opciones
  * Implementa interfaz Scene con métodos compatibles con SceneManager
  */
-import ResponsiveUtils from '../../infrastructure/ResponsiveUtils.js';
-
 export default class VictoryScene {
     constructor(dataOrGameManager) {
         console.log('🎉 VictoryScene constructor llamado con:', dataOrGameManager);
         
-        // Configurar renderer y gameManager desde múltiples fuentes
-        this.gameManager = dataOrGameManager?.gameManager || 
-                          window.appController?.gameManager || 
-                          window.gameManager || 
-                          null;
-        
-        this.renderer = this.gameManager?.battleSceneRef?.renderer || 
-                       window.appController?.renderer ||
-                       null;
-        
-        // Si no tenemos renderer, intentar configurar desde DOM
-        if (!this.renderer) {
-            this.setupCanvasFromDOM();
-        } else {
-            this.canvas = this.renderer.canvas;
-            this.ctx = this.renderer.ctx;
-        }
+        // Configurar renderer y gameManager
+        this.gameManager = window.appController?.gameManager || null;
+        this.renderer = this.gameManager?.renderer || null;
+        this.canvas = this.renderer?.canvas;
+        this.ctx = this.renderer?.ctx;
         
         // Estado de la escena
         this.initialized = false;
@@ -40,7 +26,7 @@ export default class VictoryScene {
             this.winnerData = null;
         }
         
-        console.log('🎉 VictoryScene creada, initialized:', this.initialized, 'canvas:', !!this.canvas, 'ctx:', !!this.ctx);
+        console.log('🎉 VictoryScene creada, initialized:', this.initialized);
     }
 
     /**
@@ -139,9 +125,6 @@ export default class VictoryScene {
             }
         }
 
-        // Configurar canvas responsivo
-        ResponsiveUtils.setupResponsiveCanvas(this.canvas);
-
         try {
             // Limpiar canvas
             this.ctx.fillStyle = '#000015';
@@ -179,14 +162,9 @@ export default class VictoryScene {
             if (this.canvas) {
                 this.ctx = this.canvas.getContext('2d');
                 console.log('✅ VictoryScene: Canvas configurado desde DOM');
-                return true;
-            } else {
-                console.warn('⚠️ VictoryScene: No se encontró gameCanvas en DOM');
-                return false;
             }
         } catch (error) {
             console.error('❌ Error configurando canvas desde DOM:', error);
-            return false;
         }
     }
 

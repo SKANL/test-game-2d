@@ -59,16 +59,25 @@ class MockApiClient {
                     return;
                 }
                 
-                // Verificar credenciales contra usuarios mock
-                const user = this.mockData.users.find(u => u.email === email);
+                // Verificar credenciales contra usuarios mock (email Y password)
+                const user = this.mockData.users.find(u => u.email === email && u.password === password);
                 
                 if (user) {
                     resolve({ 
+                        success: true,
                         token: 'mockToken123', 
-                        user: { ...user, name: user.name || 'Mock User' }
+                        user: { 
+                            id: user.id,
+                            email: user.email,
+                            name: user.name,
+                            role: user.role
+                        }
                     });
                 } else {
-                    reject(new Error('Credenciales inválidas'));
+                    resolve({
+                        success: false,
+                        message: 'Credenciales inválidas'
+                    });
                 }
             }, this.simulateLatency('normal'));
         });

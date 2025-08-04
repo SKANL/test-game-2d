@@ -108,7 +108,14 @@ export default class AdminDashboardScene {
         this.container.appendChild(header);
         this.container.appendChild(statsContainer);
         this.container.appendChild(mainPanel);
-        document.body.appendChild(this.container);
+        
+        // Agregar la escena al contenedor de escenas manejado por SceneManager
+        const sceneContainer = document.getElementById('scene-container');
+        if (sceneContainer) {
+            sceneContainer.appendChild(this.container);
+        } else {
+            document.body.appendChild(this.container);
+        }
 
         // Iniciar animaciones
         this.startAdminAnimation();

@@ -26,22 +26,21 @@ export default class CharacterSelectScene {
         const container = document.createElement('div');
         container.className = 'scene-transition responsive-container';
         container.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
+            position: relative;
             width: 100%;
             height: 100%;
+            min-height: 100vh;
             background: linear-gradient(135deg, var(--dark-bg) 0%, #1a1a2e 50%, var(--dark-bg) 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
             font-family: 'Orbitron', sans-serif;
             perspective: 1000px;
             padding: var(--spacing-lg);
             overflow-x: hidden;
             overflow-y: auto;
+            box-sizing: border-box;
         `;
 
         // Inicializar efectos visuales
@@ -117,7 +116,13 @@ export default class CharacterSelectScene {
         const fightButton = this.createFightButton();
         container.appendChild(fightButton);
 
-        document.body.appendChild(container);
+        // Agregar la escena al contenedor de escenas manejado por SceneManager
+        const sceneContainer = document.getElementById('scene-container');
+        if (sceneContainer) {
+            sceneContainer.appendChild(container);
+        } else {
+            document.body.appendChild(container);
+        }
 
         // Inicializar animaciones
         this.initializeAnimations(container, title, [p1Section, p2Section], fightButton);
@@ -482,7 +487,8 @@ export default class CharacterSelectScene {
         // Efecto de glitch ocasional en el título
         setInterval(() => {
             if (Math.random() > 0.8) {
-                this.vfx.createGlitchEffect(title, 500);
+                // Reemplazado por efecto existente
+                this.vfx.flashEffect(0.3, 200);
             }
         }, 3000);
     }

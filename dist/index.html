@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Fighter 2D - Epic Combat Experience</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-glow: #00f2ff;
+            --secondary-glow: #ff00c1;
+            --success-glow: #00ff8c;
+            --danger-glow: #ff4d4d;
+            --warning-glow: #ffd700;
+            --dark-bg: #0d0d1a;
+            --card-bg: #1a1a2e;
+            --border-color: #3a3a5a;
+            --text-color: #e0e0e0;
+            --combat-red: #dc2626;
+            --combat-blue: #2563eb;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--text-color);
+            overflow: hidden;
+            perspective: 1200px;
+        }
+
+        canvas {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Scene transitions */
+        .scene-transition {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .scene-transition.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Combat effects */
+        @keyframes shake-hard {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-8px) rotate(-1deg); }
+            20%, 40%, 60%, 80% { transform: translateX(8px) rotate(1deg); }
+        }
+
+        .shake-hard { 
+            animation: shake-hard 0.4s ease-in-out; 
+        }
+
+        /* Particle effects */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .shockwave {
+            position: absolute;
+            border-radius: 50%;
+            border: 4px solid var(--warning-glow);
+            pointer-events: none;
+            z-index: 99;
+        }
+
+        .flash-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 200;
+        }
+
+        /* Glitch effects */
+        .glitch-text {
+            position: relative;
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+        }
+
+        .glitch-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .glitch-layer:nth-child(2) { color: var(--secondary-glow); }
+        .glitch-layer:nth-child(3) { color: var(--success-glow); }
+
+        /* 3D Card effects */
+        .card-3d {
+            transform-style: preserve-3d;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+        }
+
+        .card-3d::before, .card-3d::after {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: inherit;
+            z-index: -1;
+            transition: opacity 0.4s ease;
+            opacity: 0;
+        }
+
+        .card-3d::before {
+            background: conic-gradient(from 90deg at 40% -25%, var(--warning-glow), var(--secondary-glow), var(--primary-glow), var(--warning-glow));
+            filter: blur(10px);
+        }
+
+        .card-3d::after {
+            background: conic-gradient(from 270deg at 60% 125%, var(--primary-glow), var(--secondary-glow), var(--warning-glow), var(--primary-glow));
+            filter: blur(20px);
+        }
+
+        .card-3d:hover::before, .card-3d:hover::after {
+            opacity: 1;
+            animation: pulse-aura 1.5s infinite alternate;
+        }
+
+        @keyframes pulse-aura {
+            from { filter: blur(10px) brightness(1); }
+            to { filter: blur(20px) brightness(1.7); }
+        }
+
+        /* Loading animations */
+        .loading-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--primary-glow);
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .loading-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--primary-glow);
+            box-shadow: 0 0 10px var(--primary-glow);
+            transition: width 0.3s ease;
+        }
+
+        .sparkle {
+            position: absolute;
+            top: -5px;
+            width: 4px;
+            height: 20px;
+            background: #fff;
+            box-shadow: 0 0 10px #fff, 0 0 20px var(--primary-glow);
+        }
+
+        /* HUD styles */
+        .hud-element {
+            font-family: 'Orbitron', monospace;
+            color: var(--text-color);
+            text-shadow: 0 0 5px currentColor;
+        }
+
+        .health-bar {
+            height: 20px;
+            background-color: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid var(--border-color);
+            position: relative;
+        }
+
+        .health-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success-glow), var(--primary-glow));
+            border-radius: 8px;
+            transition: width 0.5s ease;
+        }
+
+        /* Button styles */
+        .epic-button {
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            padding: 12px 24px;
+            border: 2px solid var(--primary-glow);
+            background: rgba(0, 242, 255, 0.1);
+            color: var(--primary-glow);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .epic-button:hover {
+            background: rgba(0, 242, 255, 0.2);
+            box-shadow: 0 0 20px var(--primary-glow);
+            transform: translateY(-2px);
+        }
+
+        .epic-button:active {
+            transform: translateY(0);
+        }
+
+        /* Utility classes */
+        .text-glow {
+            text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .slide-in-left {
+            animation: slideInLeft 0.6s ease-out;
+        }
+
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .slide-in-right {
+            animation: slideInRight 0.6s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+    </style>
+  <script type="module" crossorigin src="/assets/index-BwzcGd7-.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-jyyyYUfh.css">
+</head>
+<body>
+    <div id="canvasContainer" style="position: relative;">
+        <canvas id="gameCanvas" width="1200" height="600"></canvas>
+        <div class="flash-overlay" id="flashOverlay"></div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+</body>
+</html>

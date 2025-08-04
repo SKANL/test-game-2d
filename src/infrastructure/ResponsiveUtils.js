@@ -172,4 +172,13 @@ export default class ResponsiveUtils {
             element.style.cssText += styles;
         }
     }
+
+    /**
+     * Configura un contenedor con estilos responsivos (alias para compatibilidad)
+     * @param {HTMLElement} container - Contenedor a configurar
+     * @param {string} type - Tipo de estilos a aplicar
+     */
+    static setupResponsiveContainer(container, type = 'main') {
+        this.applyResponsiveStyles(container, type);
+    }
 }

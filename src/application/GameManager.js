@@ -1,41 +1,88 @@
 /**
- * GameManager - Gestión del estado del juego REFACTORIZADO v2.0
- * PRINCIPIOS SOLID: SRP - Solo gestión de estado y rollback netcode
+ * GameManager - Gestión del estado del juego REFACTORIZADO v3.0
+ * PRINCIPIOS SOLID: SRP - Solo gestión de estado y lógica de juego
  * ARQUITECTURA LIMPIA: Capa de aplicación pura
  * ELIMINADO: Responsabilidades de rendering, lógica duplicada
  * ENFOQUE: Orquestación del dominio, comunicación entre capas
+ * HERENCIA: Extiende BaseManager para funcionalidad común
  */
+import BaseManager from '../domain/base/BaseManager.js';
 import GameState from '../domain/GameState.js';
-import JuiceManager from '../infrastructure/JuiceManager.js';
 
-export default class GameManager {
-    constructor(apiClient = null) {
+export default class GameManager extends BaseManager {
+    constructor(apiClient = null, config = {}, juiceManager = null) {
+        super('GameManager', {
+            autoStart: false,
+            enableRollback: true,
+            autoSaveState: true,
+            logVictories: true,
+            tickRate: 60,
+            maxHistoryFrames: 180, // 3 segundos a 60fps
+            ...config
+        });
+        
         // Estado del dominio (ÚNICA FUENTE DE VERDAD)
         this.gameState = new GameState();
         
-        // Estado del GameManager
-        this.isRunning = false;
+        // Dependencias inyectadas (SOLID - DIP)
         this.apiClient = apiClient;
-        this.performanceMonitor = null; // Será inyectado externamente
+        this.juiceManager = juiceManager;
+        this.performanceMonitor = null;
+        this.sceneManager = null;
+        this.battleSceneRef = null;
         
-        // Rollback netcode para multijugador futuro (Sección 11)
+        // Rollback netcode para multijugador futuro
         this.rollbackSystem = {
             stateHistory: new Map(), // frameNumber -> gameStateJson
             currentFrame: 0,
-            maxHistoryFrames: 180, // 3 segundos a 60fps
-            tickRate: 60 // Ticks por segundo
+            maxHistoryFrames: this.config.maxHistoryFrames,
+            tickRate: this.config.tickRate
         };
+    }
+
+    /**
+     * Inicialización específica del GameManager
+     */
+    async initializeSpecific() {
+        this.log('info', 'Inicializando GameManager con arquitectura SOLID');
         
-        // Comunicación con BattleScene (SOLID - DIP)
-        this.battleSceneRef = null;
-        this.sceneManager = null; // Será inyectado externamente
+        // Inicializar sistemas auxiliares
+        await this.initializeSubsystems();
         
-        // Configuración
-        this.config = {
-            enableRollback: true,
-            autoSaveState: true,
-            logVictories: true
-        };
+        // Configurar event listeners
+        this.setupEventListeners();
+    }
+
+    /**
+     * Inicializa subsistemas del GameManager
+     */
+    async initializeSubsystems() {
+        try {
+            // Inicializar JuiceManager
+            if (typeof this.juiceManager.init === 'function') {
+                await this.juiceManager.init();
+                this.log('debug', 'JuiceManager inicializado');
+            }
+            
+            // Inicializar GameState
+            if (typeof this.gameState.init === 'function') {
+                await this.gameState.init();
+                this.log('debug', 'GameState inicializado');
+            }
+            
+        } catch (error) {
+            this.handleError('Error al inicializar subsistemas', error);
+        }
+    }
+
+    /**
+     * Configura event listeners específicos
+     */
+    setupEventListeners() {
+        // Listeners para eventos del juego
+        this.on('roundEnd', this.handleRoundEnd.bind(this));
+        this.on('gameEnd', this.handleGameEnd.bind(this));
+        this.on('characterDefeated', this.handleCharacterDefeated.bind(this));
     }
 
     /**
@@ -383,6 +430,13 @@ export default class GameManager {
      */
     addCharacterToGameState(character) {
         return this.gameState.addCharacter(character);
+    }
+
+    /**
+     * Limpiar personajes del estado del juego (SOLID - ISP)
+     */
+    clearCharactersFromGameState() {
+        this.gameState.clearCharacters();
     }
 
     /**

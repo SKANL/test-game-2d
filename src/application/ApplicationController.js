@@ -1,5 +1,5 @@
 /**
- * ApplicationController v2.0 - Controlador principal refactorizado
+ * ApplicationController v3.0 - Controlador principal REFACTORIZADO
  * REFACTORIZADO: Aplica principios SOLID y Clean Architecture
  * SRP: Una sola responsabilidad - orquestación de la aplicación
  * OCP: Extensible sin modificar código existente
@@ -7,11 +7,7 @@
  * ISP: Interfaces específicas para diferentes componentes
  * DIP: Depende de abstracciones, no de implementaciones concretas
  */
-import GameManager from './GameManager.js';
-import SceneManager from './SceneManager.js';
-import AuthManager from '../infrastructure/AuthManager.js';
-import UserPreferencesManager from './UserPreferencesManager.js';
-import PerformanceMonitor from '../infrastructure/PerformanceMonitor.js';
+import ManagerFactory from '../infrastructure/factories/ManagerFactory.js';
 import LoginScene from '../presentation/scenes/LoginScene.js';
 import LoadingScene from '../presentation/scenes/LoadingScene.js';
 import TitleScene from '../presentation/scenes/TitleScene.js';
@@ -22,8 +18,6 @@ import VictoryScene from '../presentation/scenes/VictoryScene.js';
 import GameOverScene from '../presentation/scenes/GameOverScene.js';
 import AdminDashboardScene from '../presentation/scenes/AdminDashboardScene.js';
 import OptionsScene from '../presentation/scenes/OptionsScene.js';
-import MockApiClient from '../infrastructure/MockApiClient.js';
-import ApiClient from '../infrastructure/ApiClient.js';
 
 export default class ApplicationController {
     /**
@@ -38,31 +32,17 @@ export default class ApplicationController {
             ...config
         };
         
-        // Inyección de dependencias (SOLID - DIP)
-        this.apiClient = this.config.isDevelopment ? new MockApiClient() : new ApiClient();
+        // Factory para crear managers con inyección de dependencias (SOLID - DIP)
+        this.managerFactory = new ManagerFactory(this.config);
         
-        // Servicios principales con configuración optimizada (SOLID - SRP)
-        this.authManager = new AuthManager(this.apiClient);
-        this.sceneManager = new SceneManager();
-        this.gameManager = new GameManager(this.apiClient);
-        this.performanceMonitor = new PerformanceMonitor(this.config.performanceConfig);
-        
-        // Configurar dependencias adicionales (SOLID - DIP)
-        UserPreferencesManager.setApiClient(this.apiClient);
-        
-        // Inyección de dependencias para GameManager (verificación de seguridad)
-        if (this.gameManager && typeof this.gameManager.setPerformanceMonitor === 'function') {
-            this.gameManager.setPerformanceMonitor(this.performanceMonitor);
-        } else {
-            console.warn('⚠️ GameManager no tiene método setPerformanceMonitor');
-        }
-        
-        // Inyectar SceneManager
-        if (this.gameManager && typeof this.gameManager.setSceneManager === 'function') {
-            this.gameManager.setSceneManager(this.sceneManager);
-        } else {
-            console.warn('⚠️ GameManager no tiene método setSceneManager');
-        }
+        // Servicios principales creados por factory (SOLID - SRP)
+        const managers = this.managerFactory.createAllManagers();
+        this.apiClient = managers.apiClient;
+        this.authManager = managers.authManager;
+        this.sceneManager = managers.sceneManager;
+        this.gameManager = managers.gameManager;
+        this.performanceMonitor = managers.performanceMonitor;
+        this.userPreferencesManager = managers.userPreferencesManager;
         
         // Estado interno (SOLID - SRP)
         this.state = {
@@ -77,7 +57,7 @@ export default class ApplicationController {
             this.setupGlobalDebugAccess();
         }
         
-        console.log('🎮 ApplicationController v2.0 inicializado');
+        console.log('🎮 ApplicationController v3.0 inicializado con Factory Pattern');
     }
 
     /**
@@ -89,7 +69,95 @@ export default class ApplicationController {
         window.sceneManager = this.sceneManager;
         window.performanceMonitor = this.performanceMonitor;
         
+        // Métodos de debug específicos
+        window.debugShowLogin = () => this.debugShowLogin();
+        window.debugForceLogout = () => this.debugForceLogout();
+        window.debugShowSceneState = () => this.debugShowSceneState();
+        window.debugCleanStorage = () => this.debugCleanStorage();
+        window.debugRestartApp = () => this.debugRestartApp();
+        
         console.log('🐛 Acceso global configurado para debug');
+        console.log('🐛 Métodos debug disponibles:');
+        console.log('   - debugShowLogin() - Forzar mostrar login');
+        console.log('   - debugForceLogout() - Forzar logout');
+        console.log('   - debugShowSceneState() - Ver estado de escenas');
+        console.log('   - debugCleanStorage() - Limpiar sessionStorage');
+        console.log('   - debugRestartApp() - Reiniciar aplicación');
+    }
+
+    /**
+     * Debug: Mostrar login forzado
+     */
+    async debugShowLogin() {
+        console.log('🐛 DEBUG: Forzando mostrar login...');
+        try {
+            // Limpiar autenticación
+            this.authManager.logout();
+            
+            // Mostrar login
+            await this.showLoginScene();
+            
+            console.log('✅ DEBUG: Login mostrado forzadamente');
+        } catch (error) {
+            console.error('❌ DEBUG: Error mostrando login:', error);
+        }
+    }
+
+    /**
+     * Debug: Forzar logout
+     */
+    debugForceLogout() {
+        console.log('🐛 DEBUG: Forzando logout...');
+        this.authManager.logout();
+        console.log('✅ DEBUG: Logout forzado');
+    }
+
+    /**
+     * Debug: Mostrar estado de escenas
+     */
+    debugShowSceneState() {
+        const state = {
+            currentScene: this.sceneManager.getCurrentSceneName(),
+            isTransitioning: this.sceneManager.isTransitioning,
+            sceneContainer: document.getElementById('scene-container'),
+            loginContainer: document.getElementById('login-scene-container'),
+            registeredScenes: this.sceneManager.getRegisteredScenes(),
+            authState: {
+                isAuthenticated: this.authManager.isAuthenticated(),
+                user: this.authManager.getUser(),
+                token: this.authManager.getToken()
+            },
+            sessionStorage: {
+                authToken: sessionStorage.getItem('authToken'),
+                currentUser: sessionStorage.getItem('currentUser')
+            }
+        };
+        
+        console.log('🐛 DEBUG: Estado actual de escenas:', state);
+        return state;
+    }
+
+    /**
+     * Debug: Limpiar sessionStorage
+     */
+    debugCleanStorage() {
+        console.log('🐛 DEBUG: Limpiando sessionStorage...');
+        sessionStorage.clear();
+        console.log('✅ DEBUG: sessionStorage limpiado completamente');
+        
+        // Reinicializar AuthManager
+        this.authManager.authToken = null;
+        this.authManager.currentUser = null;
+        console.log('✅ DEBUG: AuthManager reiniciado');
+    }
+
+    /**
+     * Debug: Reiniciar aplicación
+     */
+    debugRestartApp() {
+        console.log('🐛 DEBUG: Reiniciando aplicación...');
+        this.debugCleanStorage();
+        window.location.reload();
     }
 
     /**
@@ -163,11 +231,16 @@ export default class ApplicationController {
      * Inicializar servicios en el orden correcto
      */
     async initializeServices() {
+        console.log('🔧 Inicializando servicios...');
+        
         // 1. Inicializar AuthManager
+        console.log('🔧 Inicializando AuthManager...');
         this.authManager.init();
+        console.log('✅ AuthManager inicializado');
         
         // 2. Inicializar PerformanceMonitor en modo desarrollo
-        if (this.IS_DEV_MODE) {
+        if (this.config.isDevelopment) {
+            console.log('🔧 Inicializando PerformanceMonitor...');
             this.performanceMonitor.start();
             console.log('📊 PerformanceMonitor activado en modo desarrollo');
         }
@@ -206,22 +279,48 @@ export default class ApplicationController {
      * Inicializar flujo de autenticación
      */
     async initializeAuthenticationFlow() {
-        if (!this.authManager.isAuthenticated()) {
+        console.log('🔐 Iniciando flujo de autenticación...');
+        
+        const isAuthenticated = this.authManager.isAuthenticated();
+        console.log('🔐 Usuario autenticado:', isAuthenticated);
+        
+        if (!isAuthenticated) {
+            console.log('🔐 Usuario no autenticado, mostrando login...');
             await this.showLoginScene();
         } else {
             const user = this.authManager.getUser();
+            console.log('🔐 Usuario autenticado encontrado:', user);
             await this.handleAuthentication(user.role);
         }
     }
 
     /**
-     * Mostrar escena de login
+     * Mostrar escena de login usando SceneManager
      */
     async showLoginScene() {
-        const loginScene = new LoginScene((role) => {
-            this.handleAuthentication(role);
-        });
-        await this.renderScene(loginScene);
+        console.log('🔐 ApplicationController.showLoginScene() llamado');
+        try {
+            await this.sceneManager.transitionTo('login');
+            console.log('✅ Transición a login completada');
+        } catch (error) {
+            console.error('❌ Error en transición a login:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Callback de autenticación exitosa desde LoginScene
+     * @param {Object} user - Datos del usuario autenticado
+     */
+    async onAuthenticationSuccess(user) {
+        console.log('✅ Autenticación exitosa para:', user.email);
+        try {
+            await this.handleAuthentication(user.role);
+        } catch (error) {
+            console.error('❌ Error manejando autenticación exitosa:', error);
+            // Si falla, volver a mostrar login
+            await this.showLoginScene();
+        }
     }
 
     /**
@@ -231,7 +330,14 @@ export default class ApplicationController {
         try {
             // Cargar preferencias del usuario
             const user = this.authManager.getUser();
-            await UserPreferencesManager.loadPreferences(user.id);
+            console.log('🔐 Usuario obtenido para preferencias:', user);
+            
+            if (user && user.id) {
+                await this.userPreferencesManager.loadPreferences(user.id);
+                console.log('✅ Preferencias cargadas correctamente');
+            } else {
+                console.warn('⚠️ Usuario sin ID válido, omitiendo carga de preferencias');
+            }
             
             if (role === 'ADMIN') {
                 await this.transitionToAdminDashboard();
@@ -268,13 +374,20 @@ export default class ApplicationController {
      * Transiciones de escenas optimizadas
      */
     async transitionToTitle() {
+        console.log('🔄 ApplicationController.transitionToTitle() iniciado');
+        
         const titleScene = new TitleScene(
             () => this.transitionToGameMode(),     // onStartGame
             () => this.transitionToOptions(),      // onOptions
             () => this.handleLogout()              // onExit
         );
         
-        await this.sceneManager.transitionTo('title', { scene: titleScene });
+        console.log('✅ TitleScene instance creada:', titleScene);
+        
+        const result = await this.sceneManager.transitionTo('title', { scene: titleScene });
+        console.log('✅ ApplicationController.transitionToTitle() completado:', result);
+        
+        return result;
     }
 
     async transitionToOptions() {
@@ -294,9 +407,12 @@ export default class ApplicationController {
     }
 
     async transitionToGameMode() {
-        const gameModeScene = new GameModeScene((gameMode) => {
-            this.transitionToCharacterSelect(gameMode);
-        });
+        // CRÍTICO: Crear instancia de GameModeScene con callbacks apropiados
+        const gameModeScene = new GameModeScene();
+        
+        // La conexión se hará via applicationController global que GameModeScene ya tiene
+        // No necesitamos pasar callbacks en el constructor porque GameModeScene
+        // usa this.applicationController.transitionToCharacterSelect()
         
         await this.sceneManager.transitionTo('gameMode', { scene: gameModeScene });
     }

@@ -4,17 +4,67 @@
  * RESPONSIVE: Adaptado para todos los dispositivos con ResponsiveUtils
  */
 import ResponsiveUtils from '../../infrastructure/ResponsiveUtils.js';
+import BaseScene from '../../domain/base/BaseScene.js';
 
-export default class GameModeScene {
-    constructor(onModeSelected) {
-        this.onModeSelected = onModeSelected;
+export default class GameModeScene extends BaseScene {
+    constructor(data = null) {
+        super('gameMode');
+        
+        // Configurar callback usando ApplicationController global con verificación robusta
+        this.applicationController = window.applicationController;
+        
+        // Si no está disponible inmediatamente, intentar obtenerlo después
+        if (!this.applicationController) {
+            console.warn('⚠️ ApplicationController no disponible inmediatamente en GameModeScene constructor');
+            // Intentar obtenerlo en la próxima iteración del event loop
+            setTimeout(() => {
+                this.applicationController = window.applicationController;
+                if (this.applicationController) {
+                    console.log('✅ ApplicationController obtenido exitosamente en GameModeScene');
+                } else {
+                    console.error('❌ ApplicationController sigue sin estar disponible en GameModeScene');
+                }
+            }, 100);
+        } else {
+            console.log('✅ ApplicationController disponible inmediatamente en GameModeScene constructor');
+        }
+        
         this.selectedMode = null;
-        this.container = null;
         this.particleCanvas = null;
         this.animationId = null;
         
         // Inicializar ResponsiveUtils
         ResponsiveUtils.init();
+    }
+
+    /**
+     * Inicialización de la escena - Implementa IScene
+     */
+    async init() {
+        try {
+            // Llamar a inicialización base
+            await super.init();
+            
+            // Inicialización específica de GameModeScene
+            console.log('🎮 Inicializando GameModeScene...');
+            
+            // Pre-configurar elementos si es necesario
+            this.selectedMode = null;
+            
+        } catch (error) {
+            console.error('❌ Error inicializando GameModeScene:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Actualización de la escena - Implementa IScene
+     */
+    update(deltaTime) {
+        // Implementación básica - puede expandirse según necesidades
+        if (this.animationId && this.particleCanvas) {
+            // Aquí se pueden añadir actualizaciones de partículas si es necesario
+        }
     }
 
     render() {
@@ -33,11 +83,10 @@ export default class GameModeScene {
         
         // Aplicar estilos específicos responsivos para GameMode
         this.container.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
+            position: relative;
             width: 100%;
             height: 100%;
+            min-height: 100vh;
             background: var(--dark-bg);
             background-image: 
                 radial-gradient(circle at 25% 25%, rgba(0, 242, 255, 0.15) 0%, transparent 50%),
@@ -47,7 +96,6 @@ export default class GameModeScene {
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
             font-family: 'Inter', sans-serif;
             overflow-x: hidden;
             overflow-y: auto;
@@ -202,7 +250,14 @@ export default class GameModeScene {
         this.container.appendChild(backButton);
         this.container.appendChild(title);
         this.container.appendChild(modesContainer);
-        document.body.appendChild(this.container);
+        
+        // Agregar la escena al contenedor de escenas manejado por SceneManager
+        const sceneContainer = document.getElementById('scene-container');
+        if (sceneContainer) {
+            sceneContainer.appendChild(this.container);
+        } else {
+            document.body.appendChild(this.container);
+        }
 
         // Iniciar animaciones
         this.startGameModeAnimation();
@@ -543,8 +598,24 @@ export default class GameModeScene {
         }
 
         setTimeout(() => {
-            if (this.onModeSelected) {
-                this.onModeSelected(modeId);
+            // Obtener applicationController con verificación robusta
+            const appController = this.applicationController || window.applicationController;
+            
+            if (appController && typeof appController.transitionToCharacterSelect === 'function') {
+                console.log('🎮 Transicionando a selección de personajes...');
+                appController.transitionToCharacterSelect(modeId);
+            } else {
+                console.error('❌ ApplicationController no disponible o método transitionToCharacterSelect no encontrado');
+                console.log('🔍 Debugging info:', {
+                    thisController: this.applicationController,
+                    windowController: window.applicationController,
+                    appController: appController,
+                    hasMethod: appController ? typeof appController.transitionToCharacterSelect : 'no controller'
+                });
+                
+                // Fallback: intentar recargar la página o mostrar error
+                alert('Error: No se pudo continuar. La aplicación se reiniciará.');
+                window.location.reload();
             }
         }, 600);
     }

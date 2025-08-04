@@ -51,8 +51,10 @@ const mockDb = {
         }
     },
     users: [
-        { id: 1, email: 'test@example.com', role: 'USER', name: 'Test User' },
-        { id: 2, email: 'admin@example.com', role: 'ADMIN', name: 'Admin User' }
+        { id: 1, email: 'test@example.com', password: 'test123', role: 'USER', name: 'Test User' },
+        { id: 2, email: 'admin@example.com', password: 'admin123', role: 'ADMIN', name: 'Admin User' },
+        { id: 3, email: 'user@demo.com', password: 'demo123', role: 'USER', name: 'Demo User' },
+        { id: 4, email: 'player1@game.com', password: 'player123', role: 'USER', name: 'Player One' }
     ]
 };
 

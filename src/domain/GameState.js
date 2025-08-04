@@ -57,6 +57,14 @@ class GameState {
     }
 
     /**
+     * Limpiar personajes del estado (SOLID - SRP)
+     */
+    clearCharacters() {
+        console.log(`🧹 Limpiando ${this.characters.length} personajes del GameState`);
+        this.characters = [];
+    }
+
+    /**
      * Actualizar estado del juego (SOLID - SRP)
      */
     update(deltaTime) {

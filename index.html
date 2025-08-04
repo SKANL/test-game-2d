@@ -34,6 +34,111 @@
             perspective: 1200px;
         }
 
+        /* Scene container - fundamental para el funcionamiento */
+        #scene-container {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 10 !important;
+            overflow: auto !important;
+            pointer-events: auto !important;
+            background: transparent !important;
+            display: block !important;
+            visibility: visible !important;
+        }
+
+        /* Asegurar que los contenedores de escenas sean visibles */
+        [id$="-scene-container"] {
+            position: relative !important;
+            z-index: 20 !important;
+            pointer-events: auto !important;
+            width: 100% !important;
+            height: 100% !important;
+            min-height: 100vh !important;
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        /* Asegurar visibilidad específica de LoginScene */
+        #login-scene-container {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background: var(--dark-bg) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+            z-index: 1000 !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            overflow-y: auto !important;
+        }
+
+        /* LoginScene específicos */
+        .login-container {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+            z-index: 1000 !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        .login-title {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 1001 !important;
+        }
+
+        .holographic-form {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 1001 !important;
+        }
+
+        .credentials-helper {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 1001 !important;
+        }
+        /* Asegurar que todos los elementos interactivos funcionen */
+        button, input, select, textarea, .epic-button, .login-button, .register-button {
+            pointer-events: auto !important;
+            cursor: pointer;
+            -webkit-tap-highlight-color: rgba(0, 242, 255, 0.2);
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        /* Asegurar que los formularios sean interactivos */
+        form, .holographic-form {
+            pointer-events: auto !important;
+        }
+
+        /* Asegurar que las escenas sean visibles y funcionales */
+        .responsive-container, .login-container, .gamemode-container {
+            position: relative !important;
+            z-index: 20 !important;
+            pointer-events: auto !important;
+        }
+
         canvas {
             position: relative;
             z-index: 1;
@@ -255,11 +360,421 @@
     </style>
 </head>
 <body>
-    <div id="canvasContainer" style="position: relative;">
-        <canvas id="gameCanvas" width="1200" height="600"></canvas>
+    <!-- Contenedor principal para escenas -->
+    <div id="scene-container"></div>
+    
+    <!-- Contenedor del canvas del juego -->
+    <div id="canvasContainer" style="position: relative; z-index: 5; display: none;">
+        <canvas id="gameCanvas" width="1200" height="600" style="position: relative; z-index: 1;"></canvas>
         <div class="flash-overlay" id="flashOverlay"></div>
     </div>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
     <script src="./src/main.js" type="module"></script>
+    
+    <!-- Script de emergencia para debugging -->
+    <script>
+        // Limpiar sessionStorage corrupto al cargar la página
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = sessionStorage.getItem('authToken');
+            const user = sessionStorage.getItem('currentUser');
+            
+            if (token === 'undefined' || token === 'null' || 
+                user === 'undefined' || user === 'null') {
+                console.log('🧹 Limpiando sessionStorage corrupto al cargar...');
+                sessionStorage.clear();
+                console.log('✅ sessionStorage limpiado');
+            }
+        });
+        
+        // Funciones de debug específicas para navegación
+        window.debugTestNavigation = function() {
+            console.log('🧪 INICIANDO PRUEBA DE NAVEGACIÓN COMPLETA...');
+            
+            if (!window.applicationController) {
+                console.error('❌ ApplicationController no está disponible');
+                return;
+            }
+            
+            const controller = window.applicationController;
+            
+            console.log('1️⃣ Probando transición a Title Scene...');
+            controller.transitionToTitle().then(() => {
+                console.log('✅ Title Scene cargado');
+                
+                setTimeout(() => {
+                    console.log('2️⃣ Probando transición a Game Mode Scene...');
+                    controller.transitionToGameMode().then(() => {
+                        console.log('✅ Game Mode Scene cargado');
+                        
+                        setTimeout(() => {
+                            console.log('3️⃣ Probando transición a Character Select...');
+                            controller.transitionToCharacterSelect('campaign').then(() => {
+                                console.log('✅ Character Select Scene cargado');
+                                console.log('🎉 NAVEGACIÓN COMPLETA EXITOSA!');
+                            }).catch(err => console.error('❌ Error en Character Select:', err));
+                        }, 2000);
+                        
+                    }).catch(err => console.error('❌ Error en Game Mode:', err));
+                }, 2000);
+                
+            }).catch(err => console.error('❌ Error en Title:', err));
+        };
+        
+        window.debugTestLogin = function() {
+            console.log('🧪 INICIANDO PRUEBA DE LOGIN...');
+            
+            if (!window.applicationController) {
+                console.error('❌ ApplicationController no está disponible');
+                return;
+            }
+            
+            // Forzar logout primero
+            window.applicationController.debugForceLogout();
+            
+            setTimeout(() => {
+                // Simular auto-login
+                const mockUser = { id: 'test-user', email: 'test@example.com', role: 'USER' };
+                window.applicationController.onAuthenticationSuccess(mockUser)
+                    .then(() => console.log('✅ Auto-login exitoso'))
+                    .catch(err => console.error('❌ Error en auto-login:', err));
+            }, 1000);
+        };
+        
+        window.debugNavigation = {
+            toLogin: () => window.applicationController?.debugShowLogin(),
+            toTitle: () => window.applicationController?.transitionToTitle(),
+            toGameMode: () => window.applicationController?.transitionToGameMode(),
+            toCharacterSelect: () => window.applicationController?.transitionToCharacterSelect('campaign'),
+            toOptions: () => window.applicationController?.transitionToOptions(),
+            testComplete: () => window.debugTestNavigation(),
+            testLogin: () => window.debugTestLogin(),
+            testTitleScene: () => window.debugTestTitleScene(),
+            emergencyTitle: () => window.debugEmergencyTitleScene()
+        };
+        window.debugEmergencyTitleScene = function() {
+            console.log('🚨 EMERGENCIA: Creando TitleScene standalone...');
+            
+            // Limpiar todo el DOM primero
+            document.body.innerHTML = '';
+            
+            // Crear TitleScene directamente en el DOM
+            const emergencyContainer = document.createElement('div');
+            emergencyContainer.id = 'emergency-title-scene';
+            emergencyContainer.style.cssText = `
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 100%) !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: center !important;
+                align-items: center !important;
+                font-family: 'Orbitron', monospace !important;
+                color: white !important;
+                z-index: 9999 !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            `;
+            
+            // Título principal
+            const title = document.createElement('h1');
+            title.textContent = 'FIGHTER ARENA';
+            title.style.cssText = `
+                font-size: 5rem !important;
+                font-weight: 900 !important;
+                margin: 0 0 2rem 0 !important;
+                color: #00f2ff !important;
+                text-shadow: 0 0 30px rgba(0, 242, 255, 0.8) !important;
+                letter-spacing: 8px !important;
+                visibility: visible !important;
+                display: block !important;
+                text-align: center !important;
+            `;
+            
+            // Subtítulo
+            const subtitle = document.createElement('h2');
+            subtitle.textContent = 'Presiona cualquier tecla para comenzar';
+            subtitle.style.cssText = `
+                font-size: 1.5rem !important;
+                color: #e0e0e0 !important;
+                margin: 20px 0 !important;
+                opacity: 0.8 !important;
+                font-weight: 400 !important;
+                visibility: visible !important;
+                display: block !important;
+                text-align: center !important;
+            `;
+            
+            // Botón de prueba
+            const testButton = document.createElement('button');
+            testButton.textContent = 'CLICK PARA PROBAR';
+            testButton.style.cssText = `
+                padding: 15px 40px !important;
+                font-size: 1.2rem !important;
+                background: #00f2ff !important;
+                color: #0d0d1a !important;
+                border: none !important;
+                border-radius: 10px !important;
+                cursor: pointer !important;
+                margin-top: 50px !important;
+                font-weight: bold !important;
+                text-transform: uppercase !important;
+                letter-spacing: 2px !important;
+                font-family: 'Orbitron', monospace !important;
+                visibility: visible !important;
+                display: block !important;
+            `;
+            
+            testButton.addEventListener('click', () => {
+                alert('¡TitleScene standalone funcionando!');
+            });
+            
+            // Ensamblar
+            emergencyContainer.appendChild(title);
+            emergencyContainer.appendChild(subtitle);
+            emergencyContainer.appendChild(testButton);
+            document.body.appendChild(emergencyContainer);
+            
+            console.log('✅ EMERGENCIA: TitleScene standalone creado');
+            console.log('📋 Estado del contenedor:', {
+                bounds: emergencyContainer.getBoundingClientRect(),
+                visible: emergencyContainer.offsetParent !== null,
+                inDOM: document.body.contains(emergencyContainer)
+            });
+        };
+        
+        // Función de debug específica para TitleScene
+        window.debugTestTitleScene = function() {
+            console.log('🧪 INICIANDO PRUEBA DE TITLESCENE...');
+            
+            if (!window.applicationController) {
+                console.error('❌ ApplicationController no disponible');
+                return;
+            }
+            
+            const controller = window.applicationController;
+            
+            console.log('1️⃣ Probando transición directa a Title Scene...');
+            controller.transitionToTitle().then(() => {
+                
+                setTimeout(() => {
+                    console.log('2️⃣ Verificando visibilidad de TitleScene...');
+                    
+                    const titleContainer = document.getElementById('title-scene-container');
+                    if (titleContainer) {
+                        console.log('✅ TitleScene container encontrado:', {
+                            id: titleContainer.id,
+                            display: titleContainer.style.display,
+                            visibility: titleContainer.style.visibility,
+                            opacity: titleContainer.style.opacity,
+                            zIndex: titleContainer.style.zIndex,
+                            bounds: titleContainer.getBoundingClientRect(),
+                            parentElement: titleContainer.parentElement?.id,
+                            childNodes: titleContainer.childNodes.length
+                        });
+                        
+                        // Verificar elementos hijos
+                        const titleElement = titleContainer.querySelector('.main-title');
+                        const menuContainer = titleContainer.querySelector('.menu-container');
+                        
+                        console.log('📋 Elementos hijos de TitleScene:', {
+                            titleElement: titleElement ? {
+                                text: titleElement.textContent,
+                                styles: {
+                                    display: titleElement.style.display,
+                                    visibility: titleElement.style.visibility,
+                                    opacity: titleElement.style.opacity,
+                                    color: titleElement.style.color
+                                }
+                            } : 'NO ENCONTRADO',
+                            menuContainer: menuContainer ? {
+                                display: menuContainer.style.display,
+                                visibility: menuContainer.style.visibility,
+                                opacity: menuContainer.style.opacity,
+                                children: menuContainer.children.length
+                            } : 'NO ENCONTRADO'
+                        });
+                        
+                        // Forzar visibilidad extrema si es necesario
+                        console.log('3️⃣ Forzando visibilidad extrema...');
+                        titleContainer.style.cssText += `
+                            background-color: rgba(255, 0, 0, 0.1) !important;
+                            border: 2px solid red !important;
+                        `;
+                        
+                        if (titleElement) {
+                            titleElement.style.cssText += `
+                                background-color: rgba(0, 255, 0, 0.1) !important;
+                                border: 1px solid green !important;
+                            `;
+                        }
+                        
+                    } else {
+                        console.error('❌ TitleScene container NO encontrado en el DOM');
+                        
+                        // Verificar todos los contenedores presentes
+                        const allContainers = document.querySelectorAll('[id$="-scene-container"]');
+                        console.log('📋 Contenedores de escenas existentes:', Array.from(allContainers).map(c => ({
+                            id: c.id,
+                            display: c.style.display,
+                            visibility: c.style.visibility
+                        })));
+                    }
+                    
+                }, 500);
+                
+            }).catch(err => {
+                console.error('❌ Error en transición a Title:', err);
+            });
+        };
+        
+        // Función de emergencia para mostrar UI básica si todo falla
+        window.emergencyUI = function() {
+            console.log('🚨 EMERGENCIA: Creando UI básica...');
+            
+            document.body.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 0; left: 0;
+                    width: 100%; height: 100%;
+                    background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 100%);
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    color: white;
+                    font-family: Arial, sans-serif;
+                    z-index: 9999;
+                ">
+                    <h1 style="color: #00f2ff; font-size: 3rem; margin-bottom: 2rem;">FIGHTER 2D</h1>
+                    <form id="emergencyLogin" style="
+                        background: rgba(0,0,0,0.5);
+                        padding: 2rem;
+                        border-radius: 10px;
+                        border: 1px solid #00f2ff;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 1rem;
+                        width: 300px;
+                    ">
+                        <input type="email" placeholder="Email" id="emergencyEmail" style="
+                            padding: 0.5rem;
+                            border: 1px solid #00f2ff;
+                            background: rgba(0,0,0,0.8);
+                            color: white;
+                            border-radius: 5px;
+                        ">
+                        <input type="password" placeholder="Password" id="emergencyPassword" style="
+                            padding: 0.5rem;
+                            border: 1px solid #00f2ff;
+                            background: rgba(0,0,0,0.8);
+                            color: white;
+                            border-radius: 5px;
+                        ">
+                        <button type="submit" style="
+                            padding: 0.5rem;
+                            background: #00f2ff;
+                            color: black;
+                            border: none;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            font-weight: bold;
+                        ">INICIAR SESIÓN</button>
+                        <button type="button" onclick="sessionStorage.clear(); location.reload();" style="
+                            padding: 0.5rem;
+                            background: #ff4444;
+                            color: white;
+                            border: none;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            font-weight: bold;
+                        ">LIMPIAR Y RECARGAR</button>
+                    </form>
+                    <p style="margin-top: 1rem; opacity: 0.7;">
+                        UI de emergencia - usa admin@fighter2d.com / admin123
+                    </p>
+                </div>
+            `;
+            
+            document.getElementById('emergencyLogin').addEventListener('submit', (e) => {
+                e.preventDefault();
+                alert('UI de emergencia - por favor recarga la página para intentar de nuevo');
+            });
+        };
+        
+        // Función para debug del estado de la aplicación
+        window.debugAppState = function() {
+            const state = {
+                applicationController: {
+                    exists: !!window.applicationController,
+                    initialized: window.applicationController?.state?.isInitialized,
+                    currentScene: window.applicationController?.sceneManager?.getCurrentSceneName(),
+                    authManager: {
+                        exists: !!window.applicationController?.authManager,
+                        isAuthenticated: window.applicationController?.authManager?.isAuthenticated(),
+                        user: window.applicationController?.authManager?.getUser()
+                    }
+                },
+                dom: {
+                    sceneContainer: {
+                        exists: !!document.getElementById('scene-container'),
+                        children: document.getElementById('scene-container')?.children.length || 0,
+                        visible: document.getElementById('scene-container') ? 
+                                window.getComputedStyle(document.getElementById('scene-container')).visibility : 'none'
+                    },
+                    gameCanvas: {
+                        exists: !!document.getElementById('gameCanvas'),
+                        visible: document.getElementById('gameCanvas') ? 
+                                window.getComputedStyle(document.getElementById('gameCanvas')).display : 'none'
+                    }
+                },
+                sessionStorage: {
+                    authToken: sessionStorage.getItem('authToken'),
+                    currentUser: sessionStorage.getItem('currentUser')
+                }
+            };
+            
+            console.log('🔍 ESTADO DE LA APLICACIÓN:', state);
+            return state;
+        };
+        
+        // Función para forzar mostrar login
+        window.debugForceLogin = function() {
+            console.log('🔍 DEBUG: Forzando mostrar login...');
+            if (window.applicationController) {
+                window.applicationController.debugShowLogin();
+            } else {
+                console.error('❌ ApplicationController no disponible');
+            }
+        };
+        
+        // Función para navegar forzadamente
+        window.debugNavigateTo = function(sceneName) {
+            console.log(`🔍 DEBUG: Navegando a ${sceneName}...`);
+            if (window.applicationController && window.applicationController.sceneManager) {
+                window.applicationController.sceneManager.transitionTo(sceneName);
+            } else {
+                console.error('❌ ApplicationController o SceneManager no disponible');
+            }
+        };
+        
+        // Activar UI de emergencia después de 10 segundos si no hay interfaz visible
+        setTimeout(() => {
+            const sceneContainer = document.getElementById('scene-container');
+            if (!sceneContainer || !sceneContainer.children.length) {
+                console.warn('⚠️ No se detectó interfaz después de 10 segundos');
+                console.log('💡 Funciones de debug disponibles:');
+                console.log('💡 Ejecuta window.debugAppState() para ver el estado completo');
+                console.log('💡 Ejecuta window.debugForceLogin() para forzar mostrar login');
+                console.log('💡 Ejecuta window.debugNavigateTo("sceneName") para navegar forzadamente');
+                console.log('💡 Ejecuta window.emergencyUI() para mostrar UI de emergencia');
+                console.log('💡 Ejecuta window.debugCleanStorage() para limpiar storage corrupto');
+                console.log('💡 Ejecuta window.debugRestartApp() para reiniciar completamente');
+            }
+        }, 10000);
+    </script>
 </body>
 </html>

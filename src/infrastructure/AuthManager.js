@@ -3,6 +3,26 @@ export default class AuthManager {
         this.authToken = null;
         this.currentUser = null;
         this.apiClient = apiClient;
+        
+        console.log('🔐 AuthManager constructor - limpiando sessionStorage corrupto...');
+        this.cleanupCorruptedStorage();
+    }
+    
+    /**
+     * Limpiar datos corruptos del sessionStorage
+     */
+    cleanupCorruptedStorage() {
+        const token = sessionStorage.getItem('authToken');
+        const user = sessionStorage.getItem('currentUser');
+        
+        // Si cualquiera de los valores es una string "undefined" o "null", limpiar todo
+        if (token === 'undefined' || token === 'null' || 
+            user === 'undefined' || user === 'null') {
+            console.log('🧹 Limpiando sessionStorage corrupto...');
+            sessionStorage.removeItem('authToken');
+            sessionStorage.removeItem('currentUser');
+            console.log('✅ sessionStorage limpiado');
+        }
     }
 
     async register(email, password) {
@@ -80,13 +100,45 @@ export default class AuthManager {
     }
 
     init() {
+        console.log('🔐 AuthManager.init() - Verificando sessionStorage...');
+        
         // Verificar si ya existe un token en sessionStorage
         const savedToken = sessionStorage.getItem('authToken');
         const savedUser = sessionStorage.getItem('currentUser');
         
-        if (savedToken && savedUser) {
-            this.authToken = savedToken;
-            this.currentUser = JSON.parse(savedUser);
+        console.log('🔐 Datos en sessionStorage:', { 
+            savedToken: savedToken, 
+            savedUser: savedUser,
+            tokenType: typeof savedToken,
+            userType: typeof savedUser
+        });
+        
+        // Validar que los valores existan y no sean strings "undefined" o "null"
+        if (savedToken && savedToken !== 'undefined' && savedToken !== 'null' && 
+            savedUser && savedUser !== 'undefined' && savedUser !== 'null') {
+            
+            try {
+                this.authToken = savedToken;
+                this.currentUser = JSON.parse(savedUser);
+                console.log('✅ AuthManager: Sesión restaurada correctamente');
+                console.log('🔐 Usuario restaurado:', this.currentUser);
+            } catch (error) {
+                console.error('❌ Error parseando datos de sesión:', error);
+                console.log('🔧 Limpiando sessionStorage corrupto...');
+                sessionStorage.removeItem('authToken');
+                sessionStorage.removeItem('currentUser');
+                this.authToken = null;
+                this.currentUser = null;
+            }
+        } else {
+            console.log('🔐 No hay sesión válida almacenada');
+            this.authToken = null;
+            this.currentUser = null;
         }
+        
+        console.log('🔐 AuthManager inicializado - Estado final:', {
+            isAuthenticated: this.isAuthenticated(),
+            user: this.currentUser
+        });
     }
 }
