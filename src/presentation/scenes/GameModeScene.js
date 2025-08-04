@@ -1,11 +1,14 @@
 /**
- * GameModeScene - Selección de modo de juego
- * Sección 9 del Documento Maestro
+ * GameModeScene - Selección épica de modo de juego con anime.js
+ * Implementación EXACTA basada en ejemplos funcionales
  */
 export default class GameModeScene {
     constructor(onModeSelected) {
         this.onModeSelected = onModeSelected;
         this.selectedMode = null;
+        this.container = null;
+        this.particleCanvas = null;
+        this.animationId = null;
     }
 
     render() {
@@ -14,342 +17,618 @@ export default class GameModeScene {
             gameCanvas.style.display = 'none';
         }
 
-        const container = document.createElement('div');
-        container.style.cssText = `
+        // Crear el contenedor principal - ÉPICO GAME MODE STYLE
+        this.container = document.createElement('div');
+        this.container.id = 'game-mode-scene-container';
+        this.container.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #2c3e50 0%, #4a6741 100%);
+            background: var(--dark-bg);
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(0, 242, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(255, 0, 193, 0.15) 0%, transparent 50%),
+                linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.9) 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 1000;
-            font-family: Arial, sans-serif;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            padding: 2rem;
         `;
 
-        // Título principal
+        // Canvas para partículas de fondo
+        this.particleCanvas = document.createElement('canvas');
+        this.particleCanvas.id = 'gamemode-particles-canvas';
+        this.particleCanvas.width = window.innerWidth;
+        this.particleCanvas.height = window.innerHeight;
+        this.particleCanvas.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        `;
+
+        // Título épico
         const title = document.createElement('h1');
-        title.textContent = 'SELECCIONA EL MODO DE JUEGO';
+        title.textContent = 'SELECCIONA TU MODO DE BATALLA';
         title.style.cssText = `
-            color: white;
-            margin-bottom: 50px;
-            font-size: 2.8rem;
-            font-weight: bold;
+            font-family: 'Orbitron', monospace;
+            font-size: 3rem;
+            font-weight: 900;
+            color: #fff;
+            margin-bottom: 3rem;
+            text-shadow: 
+                0 0 10px var(--primary-glow),
+                0 0 20px var(--primary-glow),
+                0 0 30px rgba(0, 242, 255, 0.5);
             text-align: center;
-            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            letter-spacing: 2px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            z-index: 3;
+            position: relative;
+            opacity: 0;
+            transform: translateY(-30px);
         `;
 
-        // Contenedor de modos
+        // Contenedor de modos - EXACTO como el ejemplo
         const modesContainer = document.createElement('div');
+        modesContainer.className = 'modes-container';
         modesContainer.style.cssText = `
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            max-width: 1000px;
+            gap: 2rem;
+            max-width: 1200px;
             width: 100%;
-            padding: 0 20px;
+            z-index: 3;
+            position: relative;
         `;
 
-        const modes = [
+        // Modos de juego - ÉPICOS
+        const gameModes = [
             {
                 id: 'story',
-                name: 'Modo Historia',
-                description: 'Vive la historia de cada luchador',
+                title: 'MODO HISTORIA',
+                subtitle: 'Aventura Épica',
+                description: 'Descubre la historia de cada luchador en una aventura cinematográfica',
                 icon: '📖',
-                color: '#e74c3c',
-                enabled: false
+                color: 'var(--primary-glow)',
+                gradient: 'linear-gradient(135deg, rgba(0, 242, 255, 0.2) 0%, rgba(0, 242, 255, 0.05) 100%)',
+                features: ['Cinemáticas épicas', 'Múltiples finales', 'Desafíos únicos']
             },
             {
                 id: 'arcade',
-                name: 'Modo Arcade',
-                description: 'Combates consecutivos contra la CPU',
-                icon: '🏆',
-                color: '#f39c12',
-                enabled: false
+                title: 'MODO ARCADE',
+                subtitle: 'Combate Clásico',
+                description: 'Enfréntate a oponentes cada vez más difíciles en batallas consecutivas',
+                icon: '🕹️',
+                color: 'var(--warning-glow)',
+                gradient: 'linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 215, 0, 0.05) 100%)',
+                features: ['8 oponentes', 'Dificultad creciente', 'Rankings globales']
             },
             {
-                id: 'pvp',
-                name: 'Jugador vs Jugador',
-                description: 'Combate local entre dos jugadores',
-                icon: '👥',
-                color: '#2ecc71',
-                enabled: true
-            },
-            {
-                id: 'cpu',
-                name: 'Jugador vs CPU',
-                description: 'Combate contra la inteligencia artificial',
-                icon: '🤖',
-                color: '#3498db',
-                enabled: true
+                id: 'versus',
+                title: 'MODO VS',
+                subtitle: 'Combate Directo',
+                description: 'Lucha contra otro jugador o la IA en batallas personalizadas',
+                icon: '⚔️',
+                color: 'var(--secondary-glow)',
+                gradient: 'linear-gradient(135deg, rgba(255, 0, 193, 0.2) 0%, rgba(255, 0, 193, 0.05) 100%)',
+                features: ['1v1 épico', 'Configuración libre', 'Multijugador local']
             },
             {
                 id: 'training',
-                name: 'Modo Entrenamiento',
-                description: 'Practica combos y movimientos',
+                title: 'MODO ENTRENAMIENTO',
+                subtitle: 'Perfecciona tu Técnica',
+                description: 'Practica combos, movimientos especiales y estrategias avanzadas',
                 icon: '🥋',
-                color: '#9b59b6',
-                enabled: false
-            },
-            {
-                id: 'online',
-                name: 'Combate Online',
-                description: 'Enfréntate a jugadores de todo el mundo',
-                icon: '🌐',
-                color: '#1abc9c',
-                enabled: false
+                color: 'var(--success-glow)',
+                gradient: 'linear-gradient(135deg, rgba(0, 255, 140, 0.2) 0%, rgba(0, 255, 140, 0.05) 100%)',
+                features: ['Modo libre', 'Análisis de datos', 'Combos avanzados']
             }
         ];
 
-        modes.forEach(mode => {
-            const modeCard = this.createModeCard(mode);
+        gameModes.forEach((mode, index) => {
+            const modeCard = this.createModeCard(mode, index);
             modesContainer.appendChild(modeCard);
         });
 
-        // Información adicional
-        const infoText = document.createElement('p');
-        infoText.textContent = 'Los modos marcados como "Próximamente" estarán disponibles en futuras actualizaciones';
-        infoText.style.cssText = `
-            color: rgba(255,255,255,0.7);
-            text-align: center;
-            margin-top: 30px;
+        // Botón de volver
+        const backButton = document.createElement('button');
+        backButton.textContent = '← VOLVER';
+        backButton.style.cssText = `
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            background: transparent;
+            border: 2px solid var(--secondary-glow);
+            color: var(--secondary-glow);
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-family: 'Orbitron', monospace;
             font-size: 1rem;
-            font-style: italic;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            z-index: 4;
+            opacity: 0;
+            transform: translateX(-20px);
         `;
 
-        container.appendChild(title);
-        container.appendChild(modesContainer);
-        container.appendChild(infoText);
+        this.setupBackButton(backButton);
 
-        document.body.appendChild(container);
+        // Ensamblar
+        this.container.appendChild(this.particleCanvas);
+        this.container.appendChild(backButton);
+        this.container.appendChild(title);
+        this.container.appendChild(modesContainer);
+        document.body.appendChild(this.container);
+
+        // Iniciar animaciones
+        this.startGameModeAnimation();
+        this.startParticleBackground();
+
+        return this.container;
     }
 
-    createModeCard(mode) {
+    setupBackButton(backButton) {
+        backButton.addEventListener('mouseenter', () => {
+            if (typeof anime !== 'undefined') {
+                anime({
+                    targets: backButton,
+                    scale: 1.05,
+                    boxShadow: '0 0 20px rgba(255, 0, 193, 0.6)',
+                    duration: 200,
+                    easing: 'easeOutQuad'
+                });
+            }
+        });
+
+        backButton.addEventListener('mouseleave', () => {
+            if (typeof anime !== 'undefined') {
+                anime({
+                    targets: backButton,
+                    scale: 1,
+                    boxShadow: '0 0 0px rgba(255, 0, 193, 0)',
+                    duration: 200,
+                    easing: 'easeOutQuad'
+                });
+            }
+        });
+
+        backButton.addEventListener('click', () => {
+            this.handleBack();
+        });
+    }
+
+    createModeCard(mode, index) {
         const card = document.createElement('div');
+        card.className = 'mode-card';
+        card.dataset.mode = mode.id;
         card.style.cssText = `
-            background: ${mode.enabled ? 'rgba(255,255,255,0.1)' : 'rgba(100,100,100,0.1)'};
-            border: 2px solid ${mode.enabled ? mode.color : '#666'};
+            background: rgba(0, 0, 0, 0.3);
+            background-image: ${mode.gradient};
+            border: 2px solid ${mode.color};
             border-radius: 15px;
-            padding: 30px;
+            padding: 2rem;
             text-align: center;
-            cursor: ${mode.enabled ? 'pointer' : 'not-allowed'};
+            cursor: pointer;
             transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: 
+                0 4px 20px rgba(0, 0, 0, 0.3),
+                0 0 30px ${mode.color}20;
             position: relative;
             overflow: hidden;
-            opacity: ${mode.enabled ? 1 : 0.6};
+            opacity: 0;
+            transform: translateY(50px) scale(0.9);
         `;
 
-        // Efecto hover solo para modos habilitados
-        if (mode.enabled) {
-            card.onmouseenter = () => {
-                card.style.transform = 'translateY(-10px) scale(1.02)';
-                card.style.boxShadow = `0 10px 30px ${mode.color}40`;
-                card.style.background = `${mode.color}20`;
-            };
+        // Efecto de brillo interno
+        const glowOverlay = document.createElement('div');
+        glowOverlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, ${mode.color}10 50%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        `;
 
-            card.onmouseleave = () => {
-                card.style.transform = 'translateY(0) scale(1)';
-                card.style.boxShadow = 'none';
-                card.style.background = 'rgba(255,255,255,0.1)';
-            };
-
-            card.onclick = () => {
-                this.selectMode(mode.id);
-            };
-        }
-
-        // Icono del modo
+        // Icono épico
         const icon = document.createElement('div');
         icon.textContent = mode.icon;
         icon.style.cssText = `
             font-size: 4rem;
-            margin-bottom: 20px;
-            filter: ${mode.enabled ? 'none' : 'grayscale(1)'};
+            margin-bottom: 1rem;
+            filter: drop-shadow(0 0 10px ${mode.color});
         `;
 
-        // Nombre del modo
-        const name = document.createElement('h3');
-        name.textContent = mode.name;
-        name.style.cssText = `
-            color: ${mode.enabled ? mode.color : '#888'};
+        // Título del modo
+        const title = document.createElement('h3');
+        title.textContent = mode.title;
+        title.style.cssText = `
+            font-family: 'Orbitron', monospace;
             font-size: 1.5rem;
-            margin: 0 0 15px 0;
-            font-weight: bold;
+            font-weight: 700;
+            color: ${mode.color};
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 10px ${mode.color};
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        `;
+
+        // Subtítulo
+        const subtitle = document.createElement('div');
+        subtitle.textContent = mode.subtitle;
+        subtitle.style.cssText = `
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            color: var(--text-color);
+            margin-bottom: 1rem;
+            font-weight: 500;
+            opacity: 0.8;
         `;
 
         // Descripción
         const description = document.createElement('p');
         description.textContent = mode.description;
         description.style.cssText = `
-            color: ${mode.enabled ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)'};
-            font-size: 1rem;
-            margin: 0 0 20px 0;
-            line-height: 1.4;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-color);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+            font-size: 0.95rem;
+            opacity: 0.9;
         `;
 
-        // Estado del modo
-        const status = document.createElement('div');
-        if (mode.enabled) {
-            status.textContent = 'DISPONIBLE';
-            status.style.cssText = `
-                background: ${mode.color};
-                color: white;
-                padding: 8px 16px;
-                border-radius: 20px;
-                font-size: 0.9rem;
-                font-weight: bold;
-                display: inline-block;
-            `;
-        } else {
-            status.textContent = 'PRÓXIMAMENTE';
-            status.style.cssText = `
-                background: #666;
-                color: #ccc;
-                padding: 8px 16px;
-                border-radius: 20px;
-                font-size: 0.9rem;
-                font-weight: bold;
-                display: inline-block;
-            `;
-        }
+        // Features list
+        const featuresList = document.createElement('ul');
+        featuresList.style.cssText = `
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: left;
+        `;
 
+        mode.features.forEach(feature => {
+            const li = document.createElement('li');
+            li.style.cssText = `
+                color: var(--text-color);
+                margin-bottom: 0.5rem;
+                padding-left: 1.5rem;
+                position: relative;
+                font-family: 'Inter', sans-serif;
+                font-size: 0.9rem;
+                opacity: 0.8;
+            `;
+
+            li.innerHTML = `
+                <span style="
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    color: ${mode.color};
+                    font-weight: bold;
+                ">✓</span>
+                ${feature}
+            `;
+
+            featuresList.appendChild(li);
+        });
+
+        // Botón de selección
+        const selectButton = document.createElement('button');
+        selectButton.textContent = 'SELECCIONAR';
+        selectButton.style.cssText = `
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 2px solid ${mode.color};
+            color: ${mode.color};
+            border-radius: 8px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 1rem;
+        `;
+
+        this.setupButtonEvents(selectButton, mode);
+        this.setupCardEvents(card, glowOverlay, mode);
+
+        // Ensamblar card
+        card.appendChild(glowOverlay);
         card.appendChild(icon);
-        card.appendChild(name);
+        card.appendChild(title);
+        card.appendChild(subtitle);
         card.appendChild(description);
-        card.appendChild(status);
+        card.appendChild(featuresList);
+        card.appendChild(selectButton);
 
         return card;
     }
 
-    selectMode(modeId) {
-        this.selectedMode = modeId;
-        
-        // Efecto visual de selección
-        const cards = document.querySelectorAll('[style*="border-radius: 15px"]');
-        cards.forEach(card => {
-            card.style.transform = 'scale(0.95)';
-            card.style.opacity = '0.7';
+    setupButtonEvents(selectButton, mode) {
+        selectButton.addEventListener('mouseenter', () => {
+            selectButton.style.background = mode.color;
+            selectButton.style.color = '#000';
+            selectButton.style.boxShadow = `0 0 20px ${mode.color}`;
         });
 
-        // Mostrar confirmación
-        setTimeout(() => {
-            this.showModeConfirmation(modeId);
-        }, 300);
+        selectButton.addEventListener('mouseleave', () => {
+            selectButton.style.background = 'transparent';
+            selectButton.style.color = mode.color;
+            selectButton.style.boxShadow = 'none';
+        });
+
+        selectButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.selectMode(mode.id);
+        });
     }
 
-    showModeConfirmation(modeId) {
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-        `;
+    setupCardEvents(card, glowOverlay, mode) {
+        card.addEventListener('mouseenter', () => {
+            glowOverlay.style.opacity = '1';
+            
+            if (typeof anime !== 'undefined') {
+                anime({
+                    targets: card,
+                    scale: 1.05,
+                    boxShadow: `0 10px 30px rgba(0, 0, 0, 0.4), 0 0 40px ${mode.color}40`,
+                    duration: 300,
+                    easing: 'easeOutQuad'
+                });
 
-        const confirmDialog = document.createElement('div');
-        confirmDialog.style.cssText = `
-            background: linear-gradient(135deg, #34495e, #2c3e50);
-            padding: 40px;
-            border-radius: 20px;
-            text-align: center;
-            max-width: 400px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            transform: scale(0);
-            animation: popIn 0.3s ease-out forwards;
-        `;
+                this.createHoverParticles(card, mode.color);
+            }
+        });
 
-        // Añadir animación
-        if (!document.getElementById('modeConfirmStyles')) {
-            const style = document.createElement('style');
-            style.id = 'modeConfirmStyles';
-            style.textContent = `
-                @keyframes popIn {
-                    0% { transform: scale(0) rotate(180deg); }
-                    100% { transform: scale(1) rotate(0deg); }
+        card.addEventListener('mouseleave', () => {
+            glowOverlay.style.opacity = '0';
+            
+            if (typeof anime !== 'undefined') {
+                anime({
+                    targets: card,
+                    scale: 1,
+                    boxShadow: `0 4px 20px rgba(0, 0, 0, 0.3), 0 0 30px ${mode.color}20`,
+                    duration: 300,
+                    easing: 'easeOutQuad'
+                });
+            }
+        });
+
+        card.addEventListener('click', () => {
+            this.selectMode(mode.id);
+        });
+    }
+
+    createHoverParticles(card, color) {
+        if (!this.particleCanvas) return;
+        
+        const rect = card.getBoundingClientRect();
+        const containerRect = this.particleCanvas.getBoundingClientRect();
+        const centerX = rect.left - containerRect.left + rect.width / 2;
+        const centerY = rect.top - containerRect.top + rect.height / 2;
+        
+        const ctx = this.particleCanvas.getContext('2d');
+        
+        for (let i = 0; i < 15; i++) {
+            const p = {
+                x: centerX,
+                y: centerY,
+                radius: anime.random(1, 3),
+                alpha: 1
+            };
+            
+            const angle = anime.random(0, 360) * Math.PI / 180;
+            const distance = anime.random(30, 60);
+            
+            anime({
+                targets: p,
+                x: centerX + Math.cos(angle) * distance,
+                y: centerY + Math.sin(angle) * distance,
+                alpha: 0,
+                duration: anime.random(800, 1200),
+                easing: 'easeOutExpo',
+                update: () => {
+                    const colorRgb = color === 'var(--primary-glow)' ? '0, 242, 255' :
+                                   color === 'var(--warning-glow)' ? '255, 215, 0' :
+                                   color === 'var(--secondary-glow)' ? '255, 0, 193' : '0, 255, 140';
+                    
+                    ctx.fillStyle = `rgba(${colorRgb}, ${p.alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
+                    ctx.fill();
                 }
-            `;
-            document.head.appendChild(style);
+            });
+        }
+    }
+
+    selectMode(modeId) {
+        console.log('🎮 Modo seleccionado:', modeId);
+        this.selectedMode = modeId;
+
+        if (typeof anime !== 'undefined') {
+            const selectedCard = this.container.querySelector(`[data-mode="${modeId}"]`);
+            if (selectedCard) {
+                anime({
+                    targets: selectedCard,
+                    scale: [1, 1.1, 1],
+                    duration: 400,
+                    easing: 'easeOutElastic(1, .6)'
+                });
+
+                this.createSelectionBurst(selectedCard);
+            }
         }
 
-        const modeNames = {
-            'pvp': 'Jugador vs Jugador',
-            'cpu': 'Jugador vs CPU',
-            'story': 'Modo Historia',
-            'arcade': 'Modo Arcade',
-            'training': 'Modo Entrenamiento',
-            'online': 'Combate Online'
-        };
-
-        confirmDialog.innerHTML = `
-            <h2 style="color: #3498db; margin: 0 0 20px 0; font-size: 1.8rem;">Modo Seleccionado</h2>
-            <p style="color: white; font-size: 1.3rem; margin: 0 0 30px 0; font-weight: bold;">${modeNames[modeId]}</p>
-            <div style="display: flex; gap: 20px; justify-content: center;">
-                <button id="confirmBtn" style="
-                    background: #2ecc71;
-                    color: white;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 8px;
-                    font-size: 1.1rem;
-                    cursor: pointer;
-                    font-weight: bold;
-                ">CONFIRMAR</button>
-                <button id="cancelBtn" style="
-                    background: #e74c3c;
-                    color: white;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 8px;
-                    font-size: 1.1rem;
-                    cursor: pointer;
-                    font-weight: bold;
-                ">CANCELAR</button>
-            </div>
-        `;
-
-        overlay.appendChild(confirmDialog);
-        document.body.appendChild(overlay);
-
-        // Event listeners
-        document.getElementById('confirmBtn').onclick = () => {
-            this.cleanup();
+        setTimeout(() => {
             if (this.onModeSelected) {
                 this.onModeSelected(modeId);
             }
-        };
+        }, 600);
+    }
 
-        document.getElementById('cancelBtn').onclick = () => {
-            overlay.remove();
-            // Restaurar cards
-            const cards = document.querySelectorAll('[style*="border-radius: 15px"]');
-            cards.forEach(card => {
-                card.style.transform = 'scale(1)';
-                card.style.opacity = '1';
+    createSelectionBurst(card) {
+        if (!this.particleCanvas) return;
+        
+        const rect = card.getBoundingClientRect();
+        const containerRect = this.particleCanvas.getBoundingClientRect();
+        const centerX = rect.left - containerRect.left + rect.width / 2;
+        const centerY = rect.top - containerRect.top + rect.height / 2;
+        
+        const ctx = this.particleCanvas.getContext('2d');
+        
+        for (let i = 0; i < 30; i++) {
+            const p = {
+                x: centerX,
+                y: centerY,
+                radius: anime.random(2, 5),
+                alpha: 1
+            };
+            
+            const angle = anime.random(0, 360) * Math.PI / 180;
+            const distance = anime.random(50, 100);
+            
+            anime({
+                targets: p,
+                x: centerX + Math.cos(angle) * distance,
+                y: centerY + Math.sin(angle) * distance,
+                alpha: 0,
+                radius: [p.radius, 0],
+                duration: anime.random(1000, 1500),
+                easing: 'easeOutExpo',
+                update: () => {
+                    ctx.fillStyle = `rgba(255, 215, 0, ${p.alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
             });
+        }
+    }
+
+    startGameModeAnimation() {
+        if (typeof anime === 'undefined') {
+            console.warn('⚠️ anime.js no disponible en GameModeScene');
+            return;
+        }
+
+        const title = this.container.querySelector('h1');
+        const backButton = this.container.querySelector('button');
+        const modeCards = this.container.querySelectorAll('.mode-card');
+
+        anime.timeline({ easing: 'easeOutExpo' })
+            .add({
+                targets: backButton,
+                opacity: [0, 1],
+                translateX: [-20, 0],
+                duration: 600
+            })
+            .add({
+                targets: title,
+                opacity: [0, 1],
+                translateY: [-30, 0],
+                duration: 800
+            }, '-=400')
+            .add({
+                targets: modeCards,
+                opacity: [0, 1],
+                translateY: [50, 0],
+                scale: [0.9, 1],
+                delay: anime.stagger(150),
+                duration: 600
+            }, '-=400');
+    }
+
+    startParticleBackground() {
+        if (!this.particleCanvas) return;
+        
+        const ctx = this.particleCanvas.getContext('2d');
+        const particles = [];
+        
+        for (let i = 0; i < 40; i++) {
+            particles.push({
+                x: Math.random() * this.particleCanvas.width,
+                y: Math.random() * this.particleCanvas.height,
+                size: Math.random() * 2 + 0.5,
+                speedX: (Math.random() - 0.5) * 0.4,
+                speedY: (Math.random() - 0.5) * 0.4,
+                opacity: Math.random() * 0.3 + 0.1,
+                color: ['rgba(0, 242, 255, ', 'rgba(255, 215, 0, ', 'rgba(255, 0, 193, ', 'rgba(0, 255, 140, '][Math.floor(Math.random() * 4)]
+            });
+        }
+
+        const animateParticles = () => {
+            ctx.clearRect(0, 0, this.particleCanvas.width, this.particleCanvas.height);
+            
+            particles.forEach(particle => {
+                particle.x += particle.speedX;
+                particle.y += particle.speedY;
+                
+                if (particle.x < 0 || particle.x > this.particleCanvas.width) particle.speedX *= -1;
+                if (particle.y < 0 || particle.y > this.particleCanvas.height) particle.speedY *= -1;
+                
+                ctx.globalAlpha = particle.opacity;
+                ctx.fillStyle = particle.color + particle.opacity + ')';
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            if (document.getElementById('game-mode-scene-container')) {
+                this.animationId = requestAnimationFrame(animateParticles);
+            }
         };
+        
+        animateParticles();
+    }
+
+    handleBack() {
+        console.log('🔙 Volviendo desde selección de modos...');
+        
+        if (typeof anime !== 'undefined') {
+            anime({
+                targets: this.container,
+                opacity: [1, 0],
+                scale: [1, 0.9],
+                duration: 500,
+                easing: 'easeInExpo',
+                complete: () => {
+                    window.location.reload();
+                }
+            });
+        } else {
+            window.location.reload();
+        }
     }
 
     cleanup() {
-        // Limpiar estilos
-        const styles = document.getElementById('modeConfirmStyles');
-        if (styles) {
-            styles.remove();
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
         }
 
-        // Restaurar canvas del juego si existe
-        const gameCanvas = document.getElementById('gameCanvas');
-        if (gameCanvas) {
-            gameCanvas.style.display = 'block';
+        if (this.container) {
+            this.container.remove();
         }
+
+        this.container = null;
+        this.particleCanvas = null;
     }
 }

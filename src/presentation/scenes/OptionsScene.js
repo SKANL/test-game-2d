@@ -1,453 +1,378 @@
+/**
+ * OptionsScene - Pantalla de configuración épica con efectos de anime.js
+ * Implementación EXACTA basada en ejemplos funcionales
+ */
 import UserPreferencesManager from '../../application/UserPreferencesManager.js';
 
-/**
- * OptionsScene - Pantalla de configuración y opciones
- * Sección 9 del Documento Maestro
- */
 export default class OptionsScene {
     constructor(onBack) {
         this.onBack = onBack;
-        this.currentTab = 'audio';
+        this.currentTab = 'video';
         this.preferences = null;
         this.pendingChanges = {};
+        this.container = null;
+        this.particleCanvas = null;
+        this.animationId = null;
+        this.saveTimeout = null;
     }
 
     async init() {
-        // Cargar preferencias actuales
         this.preferences = UserPreferencesManager.getPreferences();
     }
 
     render() {
-        const container = document.createElement('div');
-        container.style.cssText = `
+        if (!this.preferences) {
+            this.init();
+        }
+
+        const gameCanvas = document.getElementById('gameCanvas');
+        if (gameCanvas) {
+            gameCanvas.style.display = 'none';
+        }
+
+        // Crear el contenedor principal - EXACTO como el ejemplo
+        this.container = document.createElement('div');
+        this.container.id = 'options-scene-container';
+        this.container.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            color: white;
-            font-family: Arial, sans-serif;
-            overflow-y: auto;
-        `;
-
-        // Header
-        const header = this.createHeader();
-        container.appendChild(header);
-
-        // Navigation
-        const nav = this.createNavigation();
-        container.appendChild(nav);
-
-        // Content
-        const content = this.createContent();
-        container.appendChild(content);
-
-        // Footer con botones
-        const footer = this.createFooter();
-        container.appendChild(footer);
-
-        document.body.appendChild(container);
-    }
-
-    createHeader() {
-        const header = document.createElement('div');
-        header.style.cssText = `
-            background: rgba(0,0,0,0.3);
-            padding: 20px;
-            text-align: center;
-            border-bottom: 2px solid #34495e;
-        `;
-
-        const title = document.createElement('h1');
-        title.textContent = 'OPCIONES';
-        title.style.cssText = `
-            margin: 0;
-            color: #3498db;
-            font-size: 2.5rem;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        `;
-
-        header.appendChild(title);
-        return header;
-    }
-
-    createNavigation() {
-        const nav = document.createElement('div');
-        nav.style.cssText = `
+            background: var(--dark-bg);
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(0, 242, 255, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 0, 193, 0.15) 0%, transparent 50%);
             display: flex;
+            flex-direction: column;
             justify-content: center;
-            background: rgba(0,0,0,0.2);
-            padding: 0;
+            align-items: center;
+            z-index: 1000;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            padding: 2rem;
         `;
 
-        const tabs = [
-            { id: 'audio', label: 'Audio', icon: '🔊' },
-            { id: 'controls', label: 'Controles', icon: '🎮' },
-            { id: 'graphics', label: 'Gráficos', icon: '🎨' },
-            { id: 'gameplay', label: 'Jugabilidad', icon: '⚡' }
+        // Canvas para partículas de fondo
+        this.particleCanvas = document.createElement('canvas');
+        this.particleCanvas.id = 'options-particles-canvas';
+        this.particleCanvas.width = window.innerWidth;
+        this.particleCanvas.height = window.innerHeight;
+        this.particleCanvas.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        `;
+
+        // Título
+        const title = document.createElement('h1');
+        title.textContent = 'CONFIGURACIÓN';
+        title.style.cssText = `
+            font-family: 'Orbitron', monospace;
+            font-size: 3rem;
+            font-weight: 900;
+            color: #fff;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 10px var(--primary-glow), 0 0 20px var(--primary-glow);
+            opacity: 0;
+            transform: translateY(-30px);
+            z-index: 3;
+        `;
+
+        // Contenedor de opciones - EXACTO como el ejemplo
+        const optionsContainer = document.createElement('div');
+        optionsContainer.className = 'options-container';
+        optionsContainer.style.cssText = `
+            width: 100%;
+            max-width: 800px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--primary-glow);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 
+                0 0 30px rgba(0, 242, 255, 0.3),
+                inset 0 0 30px rgba(0, 242, 255, 0.1);
+            backdrop-filter: blur(10px);
+            z-index: 3;
+            position: relative;
+            opacity: 0;
+            transform: scale(0.9) translateY(20px);
+        `;
+
+        // Tabs
+        const tabs = this.createTabs();
+        const tabContent = this.createTabContent();
+
+        // Botón de volver
+        const backButton = document.createElement('button');
+        backButton.textContent = '← VOLVER';
+        backButton.style.cssText = `
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            background: transparent;
+            border: 2px solid var(--secondary-glow);
+            color: var(--secondary-glow);
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-family: 'Orbitron', monospace;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            z-index: 4;
+            opacity: 0;
+            transform: translateX(-20px);
+        `;
+
+        this.setupBackButton(backButton);
+
+        optionsContainer.appendChild(tabs);
+        optionsContainer.appendChild(tabContent);
+
+        this.container.appendChild(this.particleCanvas);
+        this.container.appendChild(backButton);
+        this.container.appendChild(title);
+        this.container.appendChild(optionsContainer);
+        document.body.appendChild(this.container);
+
+        this.startOptionsAnimation();
+        this.startParticleBackground();
+
+        return this.container;
+    }
+
+    createTabs() {
+        const tabs = document.createElement('div');
+        tabs.className = 'tabs';
+        tabs.style.cssText = `
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+            margin-bottom: 2rem;
+        `;
+
+        const tabUnderline = document.createElement('div');
+        tabUnderline.className = 'tab-underline';
+        tabUnderline.style.cssText = `
+            position: absolute;
+            bottom: 0;
+            height: 2px;
+            background-color: var(--primary-glow);
+            transition: all 0.3s ease;
+            width: 0;
+            left: 0;
+        `;
+
+        const tabData = [
+            { id: 'video', text: 'Video' },
+            { id: 'audio', text: 'Audio' },
+            { id: 'game', text: 'Juego' }
         ];
 
-        tabs.forEach(tab => {
-            const button = document.createElement('button');
-            button.innerHTML = `${tab.icon} ${tab.label}`;
-            button.style.cssText = `
-                padding: 15px 25px;
-                background: ${this.currentTab === tab.id ? '#3498db' : 'transparent'};
-                color: white;
-                border: none;
+        tabData.forEach((tabInfo, index) => {
+            const tab = document.createElement('div');
+            tab.className = `tab ${tabInfo.id === this.currentTab ? 'active' : ''}`;
+            tab.dataset.tab = tabInfo.id;
+            tab.textContent = tabInfo.text;
+            tab.style.cssText = `
+                padding: 15px 20px;
                 cursor: pointer;
-                font-size: 16px;
-                transition: background 0.3s ease;
-                flex: 1;
-                max-width: 200px;
+                color: ${tabInfo.id === this.currentTab ? 'var(--primary-glow)' : 'var(--text-color)'};
+                transition: all 0.3s ease;
+                z-index: 1;
+                position: relative;
+                font-family: 'Orbitron', monospace;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 1px;
             `;
 
-            button.onmouseenter = () => {
-                if (this.currentTab !== tab.id) {
-                    button.style.background = 'rgba(52, 152, 219, 0.3)';
-                }
-            };
+            tab.addEventListener('click', () => {
+                this.switchTab(tabInfo.id, tabs, tabUnderline);
+            });
 
-            button.onmouseleave = () => {
-                if (this.currentTab !== tab.id) {
-                    button.style.background = 'transparent';
-                }
-            };
-
-            button.onclick = () => {
-                this.currentTab = tab.id;
-                this.refreshContent();
-            };
-
-            nav.appendChild(button);
+            tabs.appendChild(tab);
         });
 
-        return nav;
+        tabs.appendChild(tabUnderline);
+        this.moveUnderline(tabs.querySelector('.tab.active'), tabUnderline);
+
+        return tabs;
     }
 
-    createContent() {
-        const content = document.createElement('div');
-        content.id = 'optionsContent';
-        content.style.cssText = `
-            padding: 40px;
-            min-height: 400px;
-            max-width: 800px;
-            margin: 0 auto;
+    createTabContent() {
+        const tabContentContainer = document.createElement('div');
+        tabContentContainer.className = 'tab-content-container';
+        tabContentContainer.style.cssText = `
+            min-height: 300px;
+            position: relative;
+            width: 100%;
         `;
 
-        this.renderCurrentTab(content);
+        // Contenido para pestaña de Video
+        const videoContent = this.createVideoTabContent();
+        videoContent.id = 'video-content';
+        videoContent.className = 'tab-content active';
+        videoContent.style.display = this.currentTab === 'video' ? 'block' : 'none';
+
+        // Contenido para pestaña de Audio
+        const audioContent = this.createAudioTabContent();
+        audioContent.id = 'audio-content';
+        audioContent.className = 'tab-content';
+        audioContent.style.display = this.currentTab === 'audio' ? 'block' : 'none';
+
+        // Contenido para pestaña de Juego
+        const gameContent = this.createGameTabContent();
+        gameContent.id = 'game-content';
+        gameContent.className = 'tab-content';
+        gameContent.style.display = this.currentTab === 'game' ? 'block' : 'none';
+
+        tabContentContainer.appendChild(videoContent);
+        tabContentContainer.appendChild(audioContent);
+        tabContentContainer.appendChild(gameContent);
+
+        return tabContentContainer;
+    }
+
+    createVideoTabContent() {
+        const content = document.createElement('div');
+        content.style.cssText = `
+            padding: 1rem;
+        `;
+
+        // Debug Mode Toggle
+        const debugGroup = this.createControlGroup('Modo Debug', 'checkbox');
+        const debugCheckbox = debugGroup.querySelector('input');
+        debugCheckbox.checked = this.preferences?.graphics?.debugMode || false;
+        debugCheckbox.addEventListener('change', (e) => {
+            this.updatePreference('graphics.debugMode', e.target.checked);
+        });
+
+        // Show Hitboxes Toggle
+        const hitboxGroup = this.createControlGroup('Mostrar Hitboxes', 'checkbox');
+        const hitboxCheckbox = hitboxGroup.querySelector('input');
+        hitboxCheckbox.checked = this.preferences?.graphics?.showHitboxes || false;
+        hitboxCheckbox.addEventListener('change', (e) => {
+            this.updatePreference('graphics.showHitboxes', e.target.checked);
+        });
+
+        // Show Frame Data Toggle
+        const frameDataGroup = this.createControlGroup('Mostrar Frame Data', 'checkbox');
+        const frameDataCheckbox = frameDataGroup.querySelector('input');
+        frameDataCheckbox.checked = this.preferences?.graphics?.showFrameData || false;
+        frameDataCheckbox.addEventListener('change', (e) => {
+            this.updatePreference('graphics.showFrameData', e.target.checked);
+        });
+
+        content.appendChild(debugGroup);
+        content.appendChild(hitboxGroup);
+        content.appendChild(frameDataGroup);
+
         return content;
     }
 
-    renderCurrentTab(container) {
-        container.innerHTML = '';
-
-        switch (this.currentTab) {
-            case 'audio':
-                this.renderAudioTab(container);
-                break;
-            case 'controls':
-                this.renderControlsTab(container);
-                break;
-            case 'graphics':
-                this.renderGraphicsTab(container);
-                break;
-            case 'gameplay':
-                this.renderGameplayTab(container);
-                break;
-        }
-    }
-
-    renderAudioTab(container) {
-        const title = document.createElement('h2');
-        title.textContent = 'Configuración de Audio';
-        title.style.color = '#3498db';
-        container.appendChild(title);
-
-        // Volumen Master
-        const masterSection = this.createSliderSection(
-            'Volumen Master',
-            this.preferences.audio?.masterVolume || 0.7,
-            (value) => {
-                this.pendingChanges.audio = this.pendingChanges.audio || {};
-                this.pendingChanges.audio.masterVolume = value;
-            }
-        );
-        container.appendChild(masterSection);
-
-        // Volumen Música
-        const musicSection = this.createSliderSection(
-            'Volumen Música',
-            this.preferences.audio?.musicVolume || 0.6,
-            (value) => {
-                this.pendingChanges.audio = this.pendingChanges.audio || {};
-                this.pendingChanges.audio.musicVolume = value;
-            }
-        );
-        container.appendChild(musicSection);
-
-        // Volumen Efectos
-        const sfxSection = this.createSliderSection(
-            'Volumen Efectos',
-            this.preferences.audio?.sfxVolume || 0.8,
-            (value) => {
-                this.pendingChanges.audio = this.pendingChanges.audio || {};
-                this.pendingChanges.audio.sfxVolume = value;
-            }
-        );
-        container.appendChild(sfxSection);
-    }
-
-    renderControlsTab(container) {
-        const title = document.createElement('h2');
-        title.textContent = 'Configuración de Controles';
-        title.style.color = '#3498db';
-        container.appendChild(title);
-
-        // Controles Jugador 1
-        const p1Section = this.createControlsSection('Jugador 1', 'p1');
-        container.appendChild(p1Section);
-
-        // Controles Jugador 2
-        const p2Section = this.createControlsSection('Jugador 2', 'p2');
-        container.appendChild(p2Section);
-    }
-
-    renderGraphicsTab(container) {
-        const title = document.createElement('h2');
-        title.textContent = 'Configuración Gráfica';
-        title.style.color = '#3498db';
-        container.appendChild(title);
-
-        // Modo Debug
-        const debugSection = this.createCheckboxSection(
-            'Modo Debug',
-            this.preferences.graphics?.debugMode || false,
-            (value) => {
-                this.pendingChanges.graphics = this.pendingChanges.graphics || {};
-                this.pendingChanges.graphics.debugMode = value;
-            }
-        );
-        container.appendChild(debugSection);
-
-        // Mostrar Hitboxes
-        const hitboxSection = this.createCheckboxSection(
-            'Mostrar Hitboxes',
-            this.preferences.graphics?.showHitboxes || false,
-            (value) => {
-                this.pendingChanges.graphics = this.pendingChanges.graphics || {};
-                this.pendingChanges.graphics.showHitboxes = value;
-            }
-        );
-        container.appendChild(hitboxSection);
-
-        // Mostrar Frame Data
-        const frameDataSection = this.createCheckboxSection(
-            'Mostrar Frame Data',
-            this.preferences.graphics?.showFrameData || false,
-            (value) => {
-                this.pendingChanges.graphics = this.pendingChanges.graphics || {};
-                this.pendingChanges.graphics.showFrameData = value;
-            }
-        );
-        container.appendChild(frameDataSection);
-    }
-
-    renderGameplayTab(container) {
-        const title = document.createElement('h2');
-        title.textContent = 'Configuración de Jugabilidad';
-        title.style.color = '#3498db';
-        container.appendChild(title);
-
-        // Dificultad
-        const difficultySection = this.createSelectSection(
-            'Dificultad',
-            ['easy', 'normal', 'hard'],
-            ['Fácil', 'Normal', 'Difícil'],
-            this.preferences.gameplay?.difficulty || 'normal',
-            (value) => {
-                this.pendingChanges.gameplay = this.pendingChanges.gameplay || {};
-                this.pendingChanges.gameplay.difficulty = value;
-            }
-        );
-        container.appendChild(difficultySection);
-
-        // Buffer de entrada
-        const bufferSection = this.createSliderSection(
-            'Buffer de Entrada (ms)',
-            this.preferences.gameplay?.inputBufferTime || 150,
-            (value) => {
-                this.pendingChanges.gameplay = this.pendingChanges.gameplay || {};
-                this.pendingChanges.gameplay.inputBufferTime = value;
-            },
-            50,
-            300,
-            'ms'
-        );
-        container.appendChild(bufferSection);
-    }
-
-    createSliderSection(label, currentValue, onChange, min = 0, max = 1, unit = '') {
-        const section = document.createElement('div');
-        section.style.cssText = `
-            margin-bottom: 30px;
-            padding: 20px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
+    createAudioTabContent() {
+        const content = document.createElement('div');
+        content.style.cssText = `
+            padding: 1rem;
         `;
 
-        const labelElement = document.createElement('label');
-        labelElement.textContent = label;
-        labelElement.style.cssText = `
-            display: block;
-            margin-bottom: 10px;
-            font-size: 18px;
-            font-weight: bold;
-        `;
-
-        const sliderContainer = document.createElement('div');
-        sliderContainer.style.cssText = `
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        `;
-
-        const slider = document.createElement('input');
-        slider.type = 'range';
-        slider.min = min;
-        slider.max = max;
-        slider.step = max > 1 ? 1 : 0.01;
-        slider.value = currentValue;
-        slider.style.cssText = `
-            flex: 1;
-            height: 8px;
-            background: #34495e;
-            border-radius: 5px;
-            outline: none;
-        `;
-
-        const valueDisplay = document.createElement('span');
-        valueDisplay.textContent = `${max > 1 ? Math.round(currentValue) : (currentValue * 100).toFixed(0)}${unit === 'ms' ? unit : '%'}`;
-        valueDisplay.style.cssText = `
-            min-width: 50px;
-            text-align: right;
-            font-weight: bold;
-            color: #3498db;
-        `;
-
-        slider.oninput = () => {
-            const value = parseFloat(slider.value);
-            valueDisplay.textContent = `${max > 1 ? Math.round(value) : (value * 100).toFixed(0)}${unit === 'ms' ? unit : '%'}`;
-            onChange(value);
-        };
-
-        sliderContainer.appendChild(slider);
-        sliderContainer.appendChild(valueDisplay);
-        section.appendChild(labelElement);
-        section.appendChild(sliderContainer);
-
-        return section;
-    }
-
-    createCheckboxSection(label, currentValue, onChange) {
-        const section = document.createElement('div');
-        section.style.cssText = `
-            margin-bottom: 20px;
-            padding: 15px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        `;
-
-        const labelElement = document.createElement('label');
-        labelElement.textContent = label;
-        labelElement.style.cssText = `
-            font-size: 18px;
-            font-weight: bold;
-        `;
-
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.checked = currentValue;
-        checkbox.style.cssText = `
-            transform: scale(1.5);
-            accent-color: #3498db;
-        `;
-
-        checkbox.onchange = () => onChange(checkbox.checked);
-
-        section.appendChild(labelElement);
-        section.appendChild(checkbox);
-
-        return section;
-    }
-
-    createSelectSection(label, values, labels, currentValue, onChange) {
-        const section = document.createElement('div');
-        section.style.cssText = `
-            margin-bottom: 20px;
-            padding: 20px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-        `;
-
-        const labelElement = document.createElement('label');
-        labelElement.textContent = label;
-        labelElement.style.cssText = `
-            display: block;
-            margin-bottom: 10px;
-            font-size: 18px;
-            font-weight: bold;
-        `;
-
-        const select = document.createElement('select');
-        select.style.cssText = `
-            width: 100%;
-            padding: 10px;
-            font-size: 16px;
-            background: #34495e;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        `;
-
-        values.forEach((value, index) => {
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = labels[index];
-            option.selected = value === currentValue;
-            select.appendChild(option);
+        // Master Volume
+        const masterVolumeGroup = this.createControlGroup('Volumen General', 'slider');
+        const masterSlider = masterVolumeGroup.querySelector('input');
+        masterSlider.min = '0';
+        masterSlider.max = '100';
+        masterSlider.value = Math.round((this.preferences?.audio?.masterVolume || 0.7) * 100);
+        masterSlider.addEventListener('input', (e) => {
+            this.updatePreference('audio.masterVolume', e.target.value / 100);
         });
 
-        select.onchange = () => onChange(select.value);
+        // Music Volume
+        const musicVolumeGroup = this.createControlGroup('Volumen Música', 'slider');
+        const musicSlider = musicVolumeGroup.querySelector('input');
+        musicSlider.min = '0';
+        musicSlider.max = '100';
+        musicSlider.value = Math.round((this.preferences?.audio?.musicVolume || 0.6) * 100);
+        musicSlider.addEventListener('input', (e) => {
+            this.updatePreference('audio.musicVolume', e.target.value / 100);
+        });
 
-        section.appendChild(labelElement);
-        section.appendChild(select);
+        // SFX Volume
+        const sfxVolumeGroup = this.createControlGroup('Volumen Efectos', 'slider');
+        const sfxSlider = sfxVolumeGroup.querySelector('input');
+        sfxSlider.min = '0';
+        sfxSlider.max = '100';
+        sfxSlider.value = Math.round((this.preferences?.audio?.sfxVolume || 0.8) * 100);
+        sfxSlider.addEventListener('input', (e) => {
+            this.updatePreference('audio.sfxVolume', e.target.value / 100);
+        });
 
-        return section;
+        content.appendChild(masterVolumeGroup);
+        content.appendChild(musicVolumeGroup);
+        content.appendChild(sfxVolumeGroup);
+
+        return content;
     }
 
-    createControlsSection(playerLabel, playerKey) {
-        const section = document.createElement('div');
-        section.style.cssText = `
-            margin-bottom: 30px;
-            padding: 20px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
+    createGameTabContent() {
+        const content = document.createElement('div');
+        content.style.cssText = `
+            padding: 1rem;
         `;
 
-        const title = document.createElement('h3');
-        title.textContent = playerLabel;
-        title.style.color = '#e74c3c';
-        section.appendChild(title);
+        // Difficulty Selection
+        const difficultyGroup = this.createControlGroup('Dificultad IA', 'select');
+        const difficultySelect = difficultyGroup.querySelector('select');
+        const difficulties = ['easy', 'normal', 'hard'];
+        difficulties.forEach(diff => {
+            const option = document.createElement('option');
+            option.value = diff;
+            option.textContent = diff.charAt(0).toUpperCase() + diff.slice(1);
+            if (diff === (this.preferences?.gameplay?.difficulty || 'normal')) {
+                option.selected = true;
+            }
+            difficultySelect.appendChild(option);
+        });
+        difficultySelect.addEventListener('change', (e) => {
+            this.updatePreference('gameplay.difficulty', e.target.value);
+        });
 
-        const controls = this.preferences.controls?.[playerKey] || {};
+        // Input Buffer Time
+        const bufferGroup = this.createControlGroup('Tiempo Buffer Input (ms)', 'slider');
+        const bufferSlider = bufferGroup.querySelector('input');
+        bufferSlider.min = '50';
+        bufferSlider.max = '300';
+        bufferSlider.value = this.preferences?.gameplay?.inputBufferTime || 150;
+        bufferSlider.addEventListener('input', (e) => {
+            this.updatePreference('gameplay.inputBufferTime', parseInt(e.target.value));
+        });
+
+        // Controls Section
+        const controlsTitle = document.createElement('h3');
+        controlsTitle.textContent = 'Controles Jugador 1';
+        controlsTitle.style.cssText = `
+            color: var(--primary-glow);
+            font-family: 'Orbitron', monospace;
+            margin: 2rem 0 1rem 0;
+            text-shadow: 0 0 5px var(--primary-glow);
+        `;
+
+        content.appendChild(difficultyGroup);
+        content.appendChild(bufferGroup);
+        content.appendChild(controlsTitle);
+
+        // Player 1 Controls
+        const p1Controls = this.preferences?.controls?.p1 || {};
         const controlLabels = {
             up: 'Arriba',
-            down: 'Abajo',
+            down: 'Abajo', 
             left: 'Izquierda',
             right: 'Derecha',
             punch: 'Puño',
@@ -457,177 +382,574 @@ export default class OptionsScene {
         };
 
         Object.entries(controlLabels).forEach(([action, label]) => {
-            const controlRow = document.createElement('div');
-            controlRow.style.cssText = `
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 10px;
-                padding: 10px;
-                background: rgba(0,0,0,0.2);
-                border-radius: 5px;
-            `;
-
-            const actionLabel = document.createElement('span');
-            actionLabel.textContent = label;
-            actionLabel.style.fontSize = '16px';
-
-            const keyButton = document.createElement('button');
-            keyButton.textContent = controls[action] || 'No asignado';
-            keyButton.style.cssText = `
-                padding: 5px 15px;
-                background: #e74c3c;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                min-width: 80px;
-            `;
-
-            keyButton.onclick = () => {
-                this.remapKey(playerKey, action, keyButton);
-            };
-
-            controlRow.appendChild(actionLabel);
-            controlRow.appendChild(keyButton);
-            section.appendChild(controlRow);
+            const controlGroup = this.createControlGroup(label, 'key');
+            const keyInput = controlGroup.querySelector('input');
+            keyInput.value = p1Controls[action] || '';
+            keyInput.addEventListener('keydown', (e) => {
+                e.preventDefault();
+                keyInput.value = e.key;
+                this.updatePreference(`controls.p1.${action}`, e.key);
+            });
+            content.appendChild(controlGroup);
         });
 
-        return section;
+        return content;
     }
 
-    remapKey(playerKey, action, button) {
-        button.textContent = 'Presiona una tecla...';
-        button.style.background = '#f39c12';
+    createControlGroup(labelText, type) {
+        const controlGroup = document.createElement('div');
+        controlGroup.className = 'control-group';
+        controlGroup.style.cssText = `
+            margin-bottom: 1.5rem;
+            opacity: 0;
+            transform: translateY(10px);
+        `;
 
-        const keyListener = (event) => {
-            event.preventDefault();
-            const key = event.key;
-            
-            button.textContent = key;
-            button.style.background = '#e74c3c';
+        const label = document.createElement('label');
+        label.textContent = labelText;
+        label.style.cssText = `
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+            font-family: 'Orbitron', monospace;
+            font-weight: 600;
+            font-size: 0.9rem;
+        `;
 
-            // Guardar cambio pendiente
-            this.pendingChanges.controls = this.pendingChanges.controls || {};
-            this.pendingChanges.controls[playerKey] = this.pendingChanges.controls[playerKey] || {};
-            this.pendingChanges.controls[playerKey][action] = key;
+        let control;
+        
+        switch (type) {
+            case 'checkbox':
+                control = this.createHolographicCheckbox();
+                break;
+            case 'slider':
+                control = this.createHolographicSlider();
+                break;
+            case 'select':
+                control = this.createHolographicSelect();
+                break;
+            case 'key':
+                control = this.createKeyInput();
+                break;
+            default:
+                control = document.createElement('input');
+        }
 
-            document.removeEventListener('keydown', keyListener);
-        };
+        controlGroup.appendChild(label);
+        controlGroup.appendChild(control);
 
-        document.addEventListener('keydown', keyListener);
+        return controlGroup;
     }
 
-    createFooter() {
-        const footer = document.createElement('div');
-        footer.style.cssText = `
-            background: rgba(0,0,0,0.3);
-            padding: 20px;
+    createHolographicCheckbox() {
+        const container = document.createElement('div');
+        container.className = 'checkbox-container';
+        container.style.cssText = `
             display: flex;
-            justify-content: center;
-            gap: 20px;
-            border-top: 2px solid #34495e;
-        `;
-
-        const saveButton = document.createElement('button');
-        saveButton.textContent = 'Guardar Cambios';
-        saveButton.style.cssText = `
-            padding: 12px 25px;
-            background: #27ae60;
-            color: white;
-            border: none;
-            border-radius: 5px;
+            align-items: center;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
         `;
-        saveButton.onclick = () => this.saveChanges();
 
-        const resetButton = document.createElement('button');
-        resetButton.textContent = 'Restaurar Valores por Defecto';
-        resetButton.style.cssText = `
-            padding: 12px 25px;
-            background: #e67e22;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.style.display = 'none';
+
+        const customCheckbox = document.createElement('div');
+        customCheckbox.className = 'checkbox-custom';
+        customCheckbox.style.cssText = `
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--primary-glow);
+            border-radius: 4px;
+            position: relative;
+            margin-right: 10px;
+            background: rgba(0, 242, 255, 0.1);
+            transition: all 0.3s ease;
         `;
-        resetButton.onclick = () => this.resetToDefaults();
 
-        const backButton = document.createElement('button');
-        backButton.textContent = 'Volver';
-        backButton.style.cssText = `
-            padding: 12px 25px;
-            background: #95a5a6;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
+        const checkmark = document.createElement('div');
+        checkmark.innerHTML = '✓';
+        checkmark.style.cssText = `
+            color: var(--primary-glow);
+            font-size: 14px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            transition: transform 0.3s ease;
         `;
-        backButton.onclick = () => {
-            if (this.onBack) this.onBack();
-        };
 
-        footer.appendChild(saveButton);
-        footer.appendChild(resetButton);
-        footer.appendChild(backButton);
+        const labelText = document.createElement('span');
+        labelText.textContent = 'Activado';
+        labelText.style.cssText = `
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+        `;
 
-        return footer;
+        input.addEventListener('change', () => {
+            if (input.checked) {
+                checkmark.style.transform = 'translate(-50%, -50%) scale(1)';
+                customCheckbox.style.boxShadow = '0 0 10px var(--primary-glow)';
+            } else {
+                checkmark.style.transform = 'translate(-50%, -50%) scale(0)';
+                customCheckbox.style.boxShadow = 'none';
+            }
+        });
+
+        customCheckbox.appendChild(checkmark);
+        container.appendChild(input);
+        container.appendChild(customCheckbox);
+        container.appendChild(labelText);
+
+        container.addEventListener('click', () => {
+            input.checked = !input.checked;
+            input.dispatchEvent(new Event('change'));
+        });
+
+        return container;
     }
 
-    async saveChanges() {
-        if (Object.keys(this.pendingChanges).length === 0) {
-            alert('No hay cambios para guardar.');
+    createHolographicSlider() {
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.style.cssText = `
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        `;
+
+        // Estilos para el track
+        const style = document.createElement('style');
+        style.textContent = `
+            input[type="range"]::-webkit-slider-runnable-track {
+                height: 4px;
+                background: linear-gradient(90deg, rgba(0, 242, 255, 0.3), rgba(0, 242, 255, 0.8));
+                border-radius: 2px;
+                border: 1px solid var(--primary-glow);
+            }
+            input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                margin-top: -8px;
+                height: 20px;
+                width: 20px;
+                border-radius: 50%;
+                background: var(--primary-glow);
+                box-shadow: 0 0 10px var(--primary-glow);
+                cursor: pointer;
+                transition: box-shadow 0.2s ease;
+            }
+            input[type="range"]:active::-webkit-slider-thumb {
+                box-shadow: 0 0 20px 5px var(--primary-glow);
+            }
+        `;
+        document.head.appendChild(style);
+
+        return slider;
+    }
+
+    createHolographicSelect() {
+        const select = document.createElement('select');
+        select.style.cssText = `
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 242, 255, 0.1);
+            border: 1px solid var(--primary-glow);
+            border-radius: 5px;
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.3) inset;
+            transition: all 0.3s ease;
+        `;
+
+        select.addEventListener('focus', () => {
+            select.style.boxShadow = '0 0 15px rgba(0, 242, 255, 0.6) inset, 0 0 5px var(--primary-glow)';
+        });
+
+        select.addEventListener('blur', () => {
+            select.style.boxShadow = '0 0 10px rgba(0, 242, 255, 0.3) inset';
+        });
+
+        return select;
+    }
+
+    createKeyInput() {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.readOnly = true;
+        input.placeholder = 'Presiona una tecla...';
+        input.style.cssText = `
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 0, 193, 0.1);
+            border: 1px solid var(--secondary-glow);
+            border-radius: 5px;
+            color: var(--text-color);
+            font-family: 'Orbitron', monospace;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 0 10px rgba(255, 0, 193, 0.3) inset;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        `;
+
+        input.addEventListener('focus', () => {
+            input.style.boxShadow = '0 0 15px rgba(255, 0, 193, 0.6) inset, 0 0 5px var(--secondary-glow)';
+            input.placeholder = 'Presionando...';
+        });
+
+        input.addEventListener('blur', () => {
+            input.style.boxShadow = '0 0 10px rgba(255, 0, 193, 0.3) inset';
+            input.placeholder = 'Presiona una tecla...';
+        });
+
+        return input;
+    }
+
+    updatePreference(path, value) {
+        const keys = path.split('.');
+        const newPrefs = {};
+        let current = newPrefs;
+        
+        for (let i = 0; i < keys.length - 1; i++) {
+            current[keys[i]] = {};
+            current = current[keys[i]];
+        }
+        current[keys[keys.length - 1]] = value;
+
+        this.pendingChanges = this.deepMerge(this.pendingChanges, newPrefs);
+        
+        // Actualizar inmediatamente en memoria
+        this.preferences = this.deepMerge(this.preferences, newPrefs);
+        
+        // Debounce para evitar demasiadas llamadas a la API
+        clearTimeout(this.saveTimeout);
+        this.saveTimeout = setTimeout(() => {
+            this.savePreferences();
+        }, 500);
+    }
+
+    async savePreferences() {
+        try {
+            await UserPreferencesManager.updatePreferences(this.pendingChanges);
+            this.pendingChanges = {};
+            console.log('✅ Preferencias guardadas');
+        } catch (error) {
+            console.error('❌ Error guardando preferencias:', error);
+        }
+    }
+
+    deepMerge(target, source) {
+        const result = { ...target };
+        
+        for (const key in source) {
+            if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                result[key] = this.deepMerge(target[key] || {}, source[key]);
+            } else {
+                result[key] = source[key];
+            }
+        }
+        
+        return result;
+    }
+
+    setupBackButton(backButton) {
+        backButton.addEventListener('mouseenter', () => {
+            if (typeof anime !== 'undefined') {
+                anime({
+                    targets: backButton,
+                    scale: 1.05,
+                    boxShadow: '0 0 20px rgba(255, 0, 193, 0.6)',
+                    duration: 200,
+                    easing: 'easeOutQuad'
+                });
+            }
+        });
+
+        backButton.addEventListener('mouseleave', () => {
+            if (typeof anime !== 'undefined') {
+                anime({
+                    targets: backButton,
+                    scale: 1,
+                    boxShadow: '0 0 0px rgba(255, 0, 193, 0)',
+                    duration: 200,
+                    easing: 'easeOutQuad'
+                });
+            }
+        });
+
+        backButton.addEventListener('click', () => {
+            this.handleBack();
+        });
+    }
+
+    switchTab(targetTab, tabs, tabUnderline) {
+        if (targetTab === this.currentTab) return;
+
+        const currentContent = this.container.querySelector(`#${this.currentTab}-content`);
+        const targetContent = this.container.querySelector(`#${targetTab}-content`);
+
+        if (!targetContent) {
+            console.warn(`No se encontró contenido para la pestaña: ${targetTab}`);
             return;
         }
 
-        try {
-            await UserPreferencesManager.updatePreferences(this.pendingChanges);
-            this.preferences = UserPreferencesManager.getPreferences();
-            this.pendingChanges = {};
-            alert('Configuración guardada exitosamente.');
-        } catch (error) {
-            alert('Error guardando la configuración: ' + error.message);
+        // Crear efectos de partículas en el click de la pestaña
+        const activeTab = tabs.querySelector(`[data-tab="${targetTab}"]`);
+        const rect = activeTab.getBoundingClientRect();
+        const parentRect = this.particleCanvas.getBoundingClientRect();
+        this.createTabParticles(rect.left - parentRect.left + rect.width / 2, rect.top - parentRect.top + rect.height / 2);
+
+        // Actualizar clases de pestañas
+        const tabElements = tabs.querySelectorAll('.tab');
+        tabElements.forEach(t => {
+            t.classList.remove('active');
+            t.style.color = 'var(--text-color)';
+        });
+
+        activeTab.classList.add('active');
+        activeTab.style.color = 'var(--primary-glow)';
+
+        this.moveUnderline(activeTab, tabUnderline);
+
+        // Animar transición de contenido
+        if (typeof anime !== 'undefined') {
+            anime.timeline()
+                .add({
+                    targets: currentContent ? currentContent.querySelectorAll('.control-group') : [],
+                    translateY: [0, -10],
+                    opacity: [1, 0],
+                    delay: anime.stagger(50),
+                    easing: 'easeInExpo',
+                    duration: 300,
+                    complete: () => {
+                        if (currentContent) {
+                            currentContent.style.display = 'none';
+                        }
+                        targetContent.style.display = 'block';
+                        
+                        // Resetear y animar el nuevo contenido
+                        targetContent.querySelectorAll('.control-group').forEach(el => {
+                            el.style.opacity = '0';
+                            el.style.transform = 'translateY(10px)';
+                        });
+                    }
+                })
+                .add({
+                    targets: targetContent.querySelectorAll('.control-group'),
+                    translateY: [10, 0],
+                    opacity: [0, 1],
+                    delay: anime.stagger(100),
+                    easing: 'easeOutExpo',
+                    duration: 500
+                }, '+=50');
+        } else {
+            if (currentContent) {
+                currentContent.style.display = 'none';
+            }
+            targetContent.style.display = 'block';
+            targetContent.querySelectorAll('.control-group').forEach(el => {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            });
+        }
+
+        this.currentTab = targetTab;
+    }
+
+    createTabParticles(x, y) {
+        if (!this.particleCanvas) return;
+        
+        const ctx = this.particleCanvas.getContext('2d');
+        for (let i = 0; i < 20; i++) {
+            const particle = {
+                x: x,
+                y: y,
+                radius: Math.random() * 3 + 1,
+                color: 'rgba(0, 242, 255, 1)',
+                alpha: 1,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8
+            };
+
+            if (typeof anime !== 'undefined') {
+                anime({
+                    targets: particle,
+                    x: particle.x + particle.vx * 20,
+                    y: particle.y + particle.vy * 20,
+                    alpha: 0,
+                    duration: Math.random() * 500 + 500,
+                    easing: 'easeOutExpo',
+                    update: () => {
+                        ctx.fillStyle = particle.color.replace('1)', particle.alpha + ')');
+                        ctx.beginPath();
+                        ctx.arc(particle.x, particle.y, particle.radius, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                });
+            }
+        }
+
+        // Limpiar canvas después de las animaciones
+        setTimeout(() => {
+            if (this.particleCanvas) {
+                ctx.clearRect(0, 0, this.particleCanvas.width, this.particleCanvas.height);
+            }
+        }, 1000);
+    }
+
+    moveUnderline(targetTab, tabUnderline) {
+        if (typeof anime !== 'undefined') {
+            anime({
+                targets: tabUnderline,
+                left: targetTab.offsetLeft,
+                width: targetTab.offsetWidth,
+                easing: 'spring(1, 80, 10, 0)',
+                duration: 600
+            });
+        } else {
+            tabUnderline.style.left = targetTab.offsetLeft + 'px';
+            tabUnderline.style.width = targetTab.offsetWidth + 'px';
         }
     }
 
-    async resetToDefaults() {
-        if (confirm('¿Estás seguro de que quieres restaurar todas las configuraciones a sus valores por defecto?')) {
-            try {
-                await UserPreferencesManager.resetToDefaults();
-                this.preferences = UserPreferencesManager.getPreferences();
-                this.pendingChanges = {};
-                this.refreshContent();
-                alert('Configuración restaurada a valores por defecto.');
-            } catch (error) {
-                alert('Error restaurando la configuración: ' + error.message);
+    startOptionsAnimation() {
+        if (typeof anime === 'undefined') {
+            console.warn('⚠️ anime.js no disponible en OptionsScene');
+            return;
+        }
+
+        const title = this.container.querySelector('h1');
+        const optionsContainer = this.container.querySelector('.options-container');
+        const backButton = this.container.querySelector('button');
+        const controlGroups = this.container.querySelectorAll('.control-group');
+
+        anime.timeline({ easing: 'easeOutExpo' })
+            .add({
+                targets: backButton,
+                opacity: [0, 1],
+                translateX: [-20, 0],
+                duration: 600
+            })
+            .add({
+                targets: title,
+                opacity: [0, 1],
+                translateY: [-30, 0],
+                duration: 800
+            }, '-=400')
+            .add({
+                targets: optionsContainer,
+                opacity: [0, 1],
+                scale: [0.9, 1],
+                translateY: [20, 0],
+                duration: 600
+            }, '-=400')
+            .add({
+                targets: controlGroups,
+                opacity: [0, 1],
+                translateY: [10, 0],
+                delay: anime.stagger(100),
+                duration: 500
+            }, '-=200');
+    }
+
+    startParticleBackground() {
+        if (!this.particleCanvas) return;
+        
+        const ctx = this.particleCanvas.getContext('2d');
+        const particles = [];
+        
+        for (let i = 0; i < 30; i++) {
+            particles.push({
+                x: Math.random() * this.particleCanvas.width,
+                y: Math.random() * this.particleCanvas.height,
+                size: Math.random() * 2 + 1,
+                speedX: (Math.random() - 0.5) * 0.5,
+                speedY: (Math.random() - 0.5) * 0.5,
+                opacity: Math.random() * 0.3 + 0.1,
+                color: Math.random() > 0.5 ? 'rgba(0, 242, 255, ' : 'rgba(255, 0, 193, '
+            });
+        }
+
+        const animateParticles = () => {
+            ctx.clearRect(0, 0, this.particleCanvas.width, this.particleCanvas.height);
+            
+            particles.forEach(particle => {
+                particle.x += particle.speedX;
+                particle.y += particle.speedY;
+                
+                if (particle.x < 0 || particle.x > this.particleCanvas.width) particle.speedX *= -1;
+                if (particle.y < 0 || particle.y > this.particleCanvas.height) particle.speedY *= -1;
+                
+                ctx.globalAlpha = particle.opacity;
+                ctx.fillStyle = particle.color + particle.opacity + ')';
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            if (document.getElementById('options-scene-container')) {
+                this.animationId = requestAnimationFrame(animateParticles);
+            }
+        };
+        
+        animateParticles();
+    }
+
+    handleBack() {
+        console.log('🔙 Volviendo...');
+        
+        if (typeof anime !== 'undefined') {
+            anime({
+                targets: this.container,
+                opacity: [1, 0],
+                scale: [1, 0.9],
+                duration: 500,
+                easing: 'easeInExpo',
+                complete: () => {
+                    if (this.onBack) {
+                        this.onBack();
+                    }
+                }
+            });
+        } else {
+            if (this.onBack) {
+                this.onBack();
             }
         }
     }
 
-    refreshContent() {
-        const contentArea = document.getElementById('optionsContent');
-        if (contentArea) {
-            this.renderCurrentTab(contentArea);
-        }
-
-        // Actualizar navegación
-        const nav = contentArea.parentElement.querySelector('div:nth-child(2)');
-        if (nav) {
-            Array.from(nav.children).forEach((button, index) => {
-                const tabs = ['audio', 'controls', 'graphics', 'gameplay'];
-                button.style.background = this.currentTab === tabs[index] ? '#3498db' : 'transparent';
-            });
-        }
-    }
-
     cleanup() {
-        // Remover event listeners si existen
-        document.removeEventListener('keydown', this.keyListener);
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout);
+            this.saveTimeout = null;
+        }
+
+        // Guardar cambios pendientes antes de limpiar
+        if (Object.keys(this.pendingChanges).length > 0) {
+            this.savePreferences();
+        }
+
+        if (this.container) {
+            this.container.remove();
+        }
+
+        // Restaurar canvas del juego
+        const gameCanvas = document.getElementById('gameCanvas');
+        if (gameCanvas) {
+            gameCanvas.style.display = 'block';
+        }
+
+        this.container = null;
+        this.particleCanvas = null;
+        this.preferences = null;
+        this.pendingChanges = {};
     }
 }
